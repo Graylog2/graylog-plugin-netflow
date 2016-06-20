@@ -6,7 +6,7 @@ import javax.annotation.Nullable;
 
 import org.graylog2.plugin.Message;
 
-import com.beust.jcommander.internal.Lists;
+//Unsupported import remove import com.beust.jcommander.internal.Lists;
 
 public class TemplateRecord extends Record{
 	private int templateID;
@@ -44,7 +44,7 @@ public class TemplateRecord extends Record{
 	}
 
 	public List<Fieldv9> getFields() {
-		return Lists.newLinkedList(fields);
+		return this.fields;
 	}
 
 }
