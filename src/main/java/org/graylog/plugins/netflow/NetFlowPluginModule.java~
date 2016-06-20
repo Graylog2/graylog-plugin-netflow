@@ -14,9 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/*
-* Modified by Benjamin H. Klimkowski, bhklimk@gmail.com
-*/
 package org.graylog.plugins.netflow;
 
 import org.graylog.plugins.netflow.codecs.NetFlowCodec;
