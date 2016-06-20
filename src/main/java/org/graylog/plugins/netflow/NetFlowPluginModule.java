@@ -17,13 +17,42 @@
 package org.graylog.plugins.netflow;
 
 import org.graylog.plugins.netflow.codecs.NetFlowCodec;
+import org.graylog.plugins.netflow.codecs.TemplateStore;
 import org.graylog.plugins.netflow.inputs.NetFlowUdpInput;
+import org.graylog2.plugin.PluginConfigBean;
 import org.graylog2.plugin.PluginModule;
+import org.graylog2.plugin.inputs.codecs.Codec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
+import java.util.Set;
+
+/**
+ * Extend the PluginModule abstract class here to add you plugin to the system.
+ */
 public class NetFlowPluginModule extends PluginModule {
+    /**
+     * Returns all configuration beans required by this plugin.
+     *
+     * Implementing this method is optional. The default method returns an empty {@link Set}.
+     */
+	public static TemplateStore v9templates = new TemplateStore();
+	
+	public static TemplateStore getTemplateStore(){ return v9templates;}
+	
+    private static final Logger LOG = LoggerFactory.getLogger(NetFlowPluginModule.class);{
+    	LOG.warn("NetFlowPluginModule intialize Is Singleton?");
+    }
+    @Override
+    public Set<? extends PluginConfigBean> getConfigBeans() {
+        return Collections.emptySet();
+    }
+
     @Override
     protected void configure() {
-        addMessageInput(NetFlowUdpInput.class);
-        addCodec("netflow", NetFlowCodec.class);
+    	//Class<? extends Codec> net = NetFlowCodec.class;
+     	addMessageInput(NetFlowUdpInput.class);
+        addCodec("netflow",  NetFlowCodec.class);
     }
 }
