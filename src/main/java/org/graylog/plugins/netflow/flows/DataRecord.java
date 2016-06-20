@@ -50,49 +50,27 @@ public class DataRecord extends Record {
 		this.timestamp=ts;
 		this.dataList = dataList;
 		this.templates = v9templates;
-//		setBasicInfo();
 	}
 
-//	private void setBasicInfo() {
-//		for(Fieldv9 data : dataList){
-//			int fieldType = data.getFieldType();
-//			if(fieldType == 1) this.bytes = (int) data.getValue();
-//			else if(fieldType == 2) this.pkts = (int) data.getValue();
-//			else if(fieldType == 4)	this.proto = (int) data.getValue();
-//			else if(fieldType == 7) this.srcPort = (int) data.getValue();
-//			else if(fieldType == 8 || fieldType == 27) this.srcAddress = (InetAddress) data.getValue();
-//			else if(fieldType == 11) this.dstPort = (int) data.getValue();
-//			else if(fieldType == 12 || fieldType == 28) this.dstAddress = (InetAddress) data.getValue();
-//			if(fieldType > 28) return;
-//		}
-//		
-//	}
 
 	@Override
 	@Nullable
 	public Message toMessage() {
 		final String source = sender.getAddress().getHostAddress();
-       	final Message message = new Message(toMessageString(), source, timestamp);
+       		final Message message = new Message(toMessageString(), source, timestamp);
 		for(Fieldv9 data : dataList){
 			message.addField(templates.getStringOrElse(data.getFieldType(), Integer.toString(data.getFieldType())), data.getValue());
 		}
 		return message;
 	}
-	//TODO Make attack specific messages
 	@Override
 	public String toMessageString() {
 		return "NetflowV9";
-//					+"[" + srcAddress.getHostAddress() + "]:" + srcPort +
-//	                " <> [" + dstAddress.getHostAddress() + "]:" + dstPort +
-//	                " proto:" + proto + " pkts:" + pkts + " bytes:" + bytes;
-	   	//
 		}
 
 	@Override
 	public String toString() {
-		MoreObjects.ToStringHelper ans = MoreObjects.toStringHelper(this)
-				.add("uuid", uuid)
-                .add("sender", sender);
+		MoreObjects.ToStringHelper ans = MoreObjects.toStringHelper(this).add("uuid", uuid).add("sender", sender);
 		for(Fieldv9 data : dataList){
 			ans.add(templates.getString(data.getFieldType()), data.getValueAsString());
 		}       

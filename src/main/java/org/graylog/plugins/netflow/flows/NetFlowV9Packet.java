@@ -76,18 +76,15 @@ import static org.graylog.plugins.netflow.utils.ByteBufUtils.getUnsignedInteger;
 
 
 public class NetFlowV9Packet implements NetFlowPacket {
-	//private static final int HEADER_SIZE = 24;
-	//private static final int FLOW_SIZE = 0;
-	 private static final Logger LOG = LoggerFactory.getLogger(NetFlowV9Packet.class);
-	 
+    private static final Logger LOG = LoggerFactory.getLogger(NetFlowV9Packet.class);
     private final UUID id;
     private final InetSocketAddress sender;
     private final int length;
     private final long uptime;
     private final DateTime timestamp;
     private final List<NetFlow> flows;
-	private long packetSequence;
-	private int sessionId;
+    private long packetSequence;
+    private int sessionId;
 
     public NetFlowV9Packet(UUID id,InetSocketAddress sender,
                            int length,long uptime,
@@ -129,25 +126,16 @@ public class NetFlowV9Packet implements NetFlowPacket {
 	public static NetFlowV9Packet parse(InetSocketAddress sender, ByteBuf buf, TemplateStore v9templates) throws InvalidFlowVersionException, CorruptFlowPacketException {
 
         final int version = (int) getUnsignedInteger(buf, 0, 2);
-        //LOG.info("version "+Integer.toString(version));
         if (version != 9) {
             throw new InvalidFlowVersionException(version);
         }
 
         int count = (int) getUnsignedInteger(buf, 2, 2);
-        //LOG.info("count "+Integer.toString(count));
-        //TODO need to validate v 9 packet / handle exception
-        //        if (count <= 0 || buf.readableBytes() < HEADER_SIZE + count * FLOW_SIZE) {
-        //            throw new CorruptFlowPacketException();
-        //        }
-		/////////////////////////////////////////////
         final long uptime = getUnsignedInteger(buf, 4, 4);
         final DateTime timestamp = new DateTime(getUnsignedInteger(buf, 8, 4) * 1000, DateTimeZone.UTC);
         final UUID id = UUIDs.startOf(timestamp.getMillis());
         final long packetSequence = getUnsignedInteger(buf, 12, 4);
         final int sessionId = (int) getUnsignedInteger(buf, 16, 4);
-        //LOG.info("session "+Integer.toString(sessionId));
-        //final List<NetFlow> flows = Lists.newArrayListWithCapacity(count);
         final List<NetFlow> flows = Lists.newLinkedList();
         int i = 20; //should start on 20th byte
         int numFlow = 0;
@@ -192,12 +180,8 @@ public class NetFlowV9Packet implements NetFlowPacket {
 
 	private static Record parseDataRecords(ByteBuf subBuf,
 			TemplateStore v9templates, UUID id, InetSocketAddress sender, DateTime ts) {
-		//Not clear where DataRecords are one or more appear in a row
-		//in export packet
-//		List<Record> records = null;
 		int i = 0;
 		int flowSetId = (int) getUnsignedInteger(subBuf, i, 2);
-		//int rLength = (int) getUnsignedInteger(subBuf, i+2, 2);
 		i+=4;
 		//Try can catch in case empty map
 		TemplateRecord template = v9templates.getTemplate(flowSetId);
@@ -218,7 +202,7 @@ public class NetFlowV9Packet implements NetFlowPacket {
 			 
 			//else{ We have padding!}
 			}
-			//The following line replaces the parse 
+		    //The following line replaces the parse 
 		    //functionality of the NetFlowV5 class
 		    return new DataRecord(id, sender, ts, dataList, v9templates);
 		}
@@ -226,10 +210,9 @@ public class NetFlowV9Packet implements NetFlowPacket {
 		
 	
 
-	//	private static List<Record> parseOptionRecord(ByteBuf subBuf,
 	private static Record parseOptionRecord(ByteBuf subBuf,
 			TemplateStore v9templates)  {
-		//No need to track options at this time
+			//No need to track options at this time
 		return null;
 	}
 	private static void parseTemplateRecords(ByteBuf subBuf, TemplateStore v9templates) {

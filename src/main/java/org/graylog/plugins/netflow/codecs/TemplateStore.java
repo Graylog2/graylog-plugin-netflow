@@ -12,10 +12,7 @@ import org.slf4j.LoggerFactory;
 
 public class TemplateStore {
 	//Future work file IO to add more field types, ==> do IPFix
-	private static final Logger LOG = LoggerFactory.getLogger(TemplateStore.class);{
-	LOG.warn("Is singleton? FOOBAR!!!!");
-	}
-	
+	//Support for v9 was tested on a Cisco ASA 5500	
 	
 	private HashMap<Integer,TemplateRecord> idToRecord = new HashMap<Integer,TemplateRecord>();
 	
@@ -24,23 +21,16 @@ public class TemplateStore {
 		idToString.put(1,"IN_BYTES");
 		idToString.put(2,"IN_PKTS");
 		idToString.put(3,"FLOWS");
-		idToString.put(4,"NF_F_PROTOCOL");
 		idToString.put(4,"PROTOCOL");
 		idToString.put(5,"SRC_TOS");
 		idToString.put(6,"TCP_FLAGS");
-		idToString.put(7,"NF_F_SRC_PORT");
 		idToString.put(7,"L4_SRC_PORT");
-		idToString.put(8,"NF_F_SRC_ADDR_IPV4");
 		idToString.put(8,"IPV4_SRC_ADDR");
 		idToString.put(9,"SRC_MASK");
-		idToString.put(10,"NF_F_SRC_INTF_ID");
 		idToString.put(10,"INPUT_SNMP");
-		idToString.put(11,"NF_F_DST_PORT");
 		idToString.put(11,"L4_DST_PORT");
-		idToString.put(12,"NF_F_DST_ADDR_IPV4");
 		idToString.put(12,"IPV4_DST_ADDR");
 		idToString.put(13,"DST_MASK");
-		idToString.put(14,"NF_F_DST_INTF_ID");
 		idToString.put(14,"OUTPUT_SNMP");
 		idToString.put(15,"IPV4_NEXT_HOP");
 		idToString.put(16,"SRC_AS");
@@ -54,9 +44,7 @@ public class TemplateStore {
 		idToString.put(24,"OUT_PKTS");
 		idToString.put(25,"MIN_PKT_LNGTH");
 		idToString.put(26,"MAX_PKT_LNGTH");
-		idToString.put(27,"NF_F_SRC_ADDR_IPV6");
 		idToString.put(27,"IPV6_SRC_ADDR");
-		idToString.put(28,"NF_F_DST_ADDR_IPV6");
 		idToString.put(28,"IPV6_DST_ADDR");
 		idToString.put(29,"IPV6_SRC_MASK");
 		idToString.put(30,"IPV6_DST_MASK");
@@ -177,23 +165,16 @@ public class TemplateStore {
 		stringToId.put("IN_BYTES",1);
 		stringToId.put("IN_PKTS",2);
 		stringToId.put("FLOWS",3);
-		stringToId.put("NF_F_PROTOCOL",4);
 		stringToId.put("PROTOCOL",4);
 		stringToId.put("SRC_TOS",5);
 		stringToId.put("TCP_FLAGS",6);
-		stringToId.put("NF_F_SRC_PORT",7);
 		stringToId.put("L4_SRC_PORT",7);
-		//stringToId.put("NF_F_SRC_ADDR_IPV4",8);
 		stringToId.put("IPV4_SRC_ADDR",8);
 		stringToId.put("SRC_MASK",9);
-		stringToId.put("NF_F_SRC_INTF_ID",10);
 		stringToId.put("INPUT_SNMP",10);
-		stringToId.put("NF_F_DST_PORT",11);
 		stringToId.put("L4_DST_PORT",11);
-		//stringToId.put("NF_F_DST_ADDR_IPV4",12);
 		stringToId.put("IPV4_DST_ADDR",12);
 		stringToId.put("DST_MASK",13);
-		stringToId.put("NF_F_DST_INTF_ID",14);
 		stringToId.put("OUTPUT_SNMP",14);
 		stringToId.put("IPV4_NEXT_HOP",15);
 		stringToId.put("SRC_AS",16);
@@ -207,9 +188,7 @@ public class TemplateStore {
 		stringToId.put("OUT_PKTS",24);
 		stringToId.put("MIN_PKT_LNGTH",25);
 		stringToId.put("MAX_PKT_LNGTH",26);
-//		stringToId.put("NF_F_SRC_ADDR_IPV6",27);
 		stringToId.put("IPV6_SRC_ADDR",27);
-		stringToId.put("NF_F_DST_ADDR_IPV6",28);
 		stringToId.put("IPV6_DST_ADDR",28);
 		stringToId.put("IPV6_SRC_MASK",29);
 		stringToId.put("IPV6_DST_MASK",30);

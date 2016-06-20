@@ -38,7 +38,8 @@ public class NetFlowPluginModule extends PluginModule {
      * Implementing this method is optional. The default method returns an empty {@link Set}.
      */
 	public static TemplateStore v9templates = new TemplateStore();
-        //v9 support	
+        //v9 support ; initialized singleton object to hold mappings of 
+	//fields	
 	public static TemplateStore getTemplateStore(){ return v9templates;}
 	
     @Override
