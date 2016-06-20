@@ -32,13 +32,10 @@ public class NetFlowParser {
     public static NetFlowPacket parse(RawMessage rawMessage, TemplateStore v9templates) throws FlowException {
         final InetSocketAddress sender = rawMessage.getRemoteAddress() != null ? rawMessage.getRemoteAddress().getInetSocketAddress() : null;
         final ByteBuf buf = Unpooled.wrappedBuffer(rawMessage.getPayload());
-        //System.out.println("Netflow parsers"); //TODO debug
         switch (buf.getUnsignedShort(0)) {
             case 5:
-            	//System.exit(2);
             	return NetFlowV5Packet.parse(sender, buf);
             case 9:
-            	//System.exit(1);
             	//This class is created by NetFlowCodec
             	//NetFlowPlugModule calls NetFlowCodec
             	//v9templates is a singleton to track v9 template flowSets

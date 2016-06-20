@@ -53,7 +53,6 @@ public class Fieldv9 {
 	
 	public int getFieldType(){return this.fieldType;}
 	public int getFieldLen(){ return this.fieldLength;}
-	//private void setFieldValue(Number val){ this.fieldValue = val;}
 	
 	public Fieldv9 getNewFieldWithValue(ByteBuf subBuf, int i) {
 		// Tests for type of flow and returns a "deep copy" of v9 field
@@ -67,7 +66,6 @@ public class Fieldv9 {
 
 
 	public Object getValue() {
-		// TODO Throw exception?
 		if(fieldDataType == 0) return numericField;
 		else if(fieldDataType == 1) return address; 
 		else return string;
