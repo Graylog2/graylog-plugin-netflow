@@ -38,7 +38,7 @@ public class NetFlowPluginModule extends PluginModule {
      * Implementing this method is optional. The default method returns an empty {@link Set}.
      */
 	public static TemplateStore v9templates = new TemplateStore();
-	
+        //v9 support	
 	public static TemplateStore getTemplateStore(){ return v9templates;}
 	
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowPluginModule.class);{
