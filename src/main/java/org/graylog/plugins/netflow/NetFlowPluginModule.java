@@ -41,9 +41,6 @@ public class NetFlowPluginModule extends PluginModule {
         //v9 support	
 	public static TemplateStore getTemplateStore(){ return v9templates;}
 	
-    private static final Logger LOG = LoggerFactory.getLogger(NetFlowPluginModule.class);{
-    	LOG.warn("NetFlowPluginModule intialize Is Singleton?");
-    }
     @Override
     public Set<? extends PluginConfigBean> getConfigBeans() {
         return Collections.emptySet();
