@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2012, 2013, 2014 wasted.io Ltd <really@wasted.io>
- * Copyright (C) 2015 Graylog, Inc. (hello@graylog.org)
+ * Copyright (C) 2015-2017 Graylog, Inc. (hello@graylog.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,6 @@
  * limitations under the License.
  */
 
-/*
-* Modified by Benjamin H. Klimkowski, bhklimk@gmail.com
-*/
 package org.graylog.plugins.netflow.flows;
 
 import io.netty.buffer.ByteBuf;
@@ -40,9 +37,6 @@ public class NetFlowParser {
             case 5:
             	return NetFlowV5Packet.parse(sender, buf);
             case 9:
-            	//This class is created by NetFlowCodec
-            	//NetFlowPlugModule calls NetFlowCodec
-            	//v9templates is a singleton to track v9 template flowSets
             	return NetFlowV9Packet.parse(sender, buf, v9templates);
             default:
                 final RawMessage.SourceNode sourceNode = rawMessage.getSourceNodes().get(rawMessage.getSourceNodes().size() - 1);

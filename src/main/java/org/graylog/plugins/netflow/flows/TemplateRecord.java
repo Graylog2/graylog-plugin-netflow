@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2012, 2013, 2014 wasted.io Ltd <really@wasted.io>
- * Copyright (C) 2015 Graylog, Inc. (hello@graylog.org)
+ * Copyright (C) 2015-2017 Graylog, Inc. (hello@graylog.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
  * limitations under the License.
  */
 
-/*
-* Created by Benjamin H. Klimkowski, bhklimk@gmail.com
-*/
-
 package org.graylog.plugins.netflow.flows;
 
 import java.util.List;
@@ -26,8 +22,6 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import org.graylog2.plugin.Message;
-
-//Unsupported import remove import com.beust.jcommander.internal.Lists;
 
 public class TemplateRecord extends Record{
 	private int templateID;
@@ -43,10 +37,10 @@ public class TemplateRecord extends Record{
 	public int getId(){
 		return this.templateID;		
 	}
+
 	@Override
 	@Nullable
 	public Message toMessage() {
-		// N/A
 		return null;
 	}
 

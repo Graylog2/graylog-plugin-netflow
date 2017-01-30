@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2012, 2013, 2014 wasted.io Ltd <really@wasted.io>
- * Copyright (C) 2015 Graylog, Inc. (hello@graylog.org)
+ * Copyright (C) 2015-2017 Graylog, Inc. (hello@graylog.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/*
-* Created by Benjamin H. Klimkowski, bhklimk@gmail.com
-*/
 
 package org.graylog.plugins.netflow.codecs;
 
@@ -48,24 +44,17 @@ import javax.inject.Inject;
 import java.util.Collection;
 import java.util.List;
 
-import kafka.log.Log;
-
 @Codec(name = "netflow", displayName = "NetFlow")
 public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
 	
 	public TemplateStore v9templates = NetFlowPluginModule.getTemplateStore();
 	
-    private static final Logger LOG = LoggerFactory.getLogger(NetFlowCodec.class);{
-    	LOG.warn("Netflow codex intialize");
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(NetFlowCodec.class);
+
     @Inject
     protected NetFlowCodec(@Assisted Configuration configuration) {
         super(configuration);
     }
-
-    public NetFlowCodec(@Assisted Configuration configuration, TemplateStore v9templates2) {
-    	 super(configuration);
-	}
 
 	@Nullable
     @Override
@@ -77,7 +66,7 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     @Override
     public Collection<Message> decodeMessages(@Nonnull RawMessage rawMessage) {
         try {
-            final NetFlowPacket packet = NetFlowParser.parse(rawMessage,v9templates);
+            final NetFlowPacket packet = NetFlowParser.parse(rawMessage, v9templates);
 
             if (packet == null) {
                 return null;
