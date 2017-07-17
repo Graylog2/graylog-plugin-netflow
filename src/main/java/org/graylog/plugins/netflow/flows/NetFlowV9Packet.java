@@ -116,8 +116,8 @@ public class NetFlowV9Packet implements NetFlowPacket {
         this.sessionId = sessionId;
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public Collection getFlows() {
+    @Override
+    public Collection<NetFlow> getFlows() {
         return flows;
     }
 

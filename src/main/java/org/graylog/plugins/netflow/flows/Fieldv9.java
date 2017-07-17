@@ -25,13 +25,12 @@ import static org.graylog.plugins.netflow.utils.ByteBufUtils.getInetAddress;
 import static org.graylog.plugins.netflow.utils.ByteBufUtils.getUnsignedInteger;
 
 public class Fieldv9 {
-    private int fieldType;
-    private int fieldLength;
-    private int fieldDataType = 0;
+    private final int fieldType;
+    private final int fieldLength;
+    private final int fieldDataType;
 
     private long numericField;
     private InetAddress address;
-    private String string = "NONE";
 
     public Fieldv9(int fieldType, int fieldLength, int fieldDataType) {
         this.fieldType = fieldType;
@@ -62,22 +61,24 @@ public class Fieldv9 {
     }
 
     public Fieldv9 getNewFieldWithValue(ByteBuf subBuf, int i) {
-        if (this.fieldDataType == 0) {
-            return new Fieldv9(fieldType, fieldLength, fieldDataType, getUnsignedInteger(subBuf, i, fieldLength));
-        } else if (this.fieldDataType == 1) {
-            return new Fieldv9(fieldType, fieldLength, fieldDataType, getInetAddress(subBuf, i, fieldLength));
-        } else {
-            return new Fieldv9(fieldType, fieldLength, fieldDataType);
+        switch (fieldDataType) {
+            case 0:
+                return new Fieldv9(fieldType, fieldLength, fieldDataType, getUnsignedInteger(subBuf, i, fieldLength));
+            case 1:
+                return new Fieldv9(fieldType, fieldLength, fieldDataType, getInetAddress(subBuf, i, fieldLength));
+            default:
+                return new Fieldv9(fieldType, fieldLength, fieldDataType);
         }
     }
 
     public Object getValue() {
-        if (fieldDataType == 0) {
-            return numericField;
-        } else if (fieldDataType == 1) {
-            return address;
-        } else {
-            return string;
+        switch (fieldDataType) {
+            case 0:
+                return numericField;
+            case 1:
+                return address;
+            default:
+                return "NONE";
         }
     }
 

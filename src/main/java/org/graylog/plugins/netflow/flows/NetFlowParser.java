@@ -20,29 +20,32 @@ package org.graylog.plugins.netflow.flows;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.graylog.plugins.netflow.codecs.TemplateStore;
+import org.graylog2.plugin.ResolvableInetSocketAddress;
 import org.graylog2.plugin.journal.RawMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 public class NetFlowParser {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowParser.class);
 
     public static NetFlowPacket parse(RawMessage rawMessage, TemplateStore v9templates) throws FlowException {
-        final InetSocketAddress sender = rawMessage.getRemoteAddress() != null ? rawMessage.getRemoteAddress().getInetSocketAddress() : null;
+        final ResolvableInetSocketAddress remoteAddress = rawMessage.getRemoteAddress();
+        final InetSocketAddress sender = remoteAddress != null ? remoteAddress.getInetSocketAddress() : null;
         final ByteBuf buf = Unpooled.wrappedBuffer(rawMessage.getPayload());
-        switch (buf.getUnsignedShort(0)) {
+        final int netFlowVersion = buf.getUnsignedShort(0);
+        switch (netFlowVersion) {
             case 5:
                 return NetFlowV5Packet.parse(sender, buf);
             case 9:
                 return NetFlowV9Packet.parse(sender, buf, v9templates);
             default:
-                final RawMessage.SourceNode sourceNode = rawMessage.getSourceNodes().get(rawMessage.getSourceNodes().size() - 1);
+                final List<RawMessage.SourceNode> sourceNodes = rawMessage.getSourceNodes();
+                final RawMessage.SourceNode sourceNode = sourceNodes.get(sourceNodes.size() - 1);
                 final String inputId = sourceNode == null ? "<unknown>" : sourceNode.inputId;
-                LOG.warn("Unsupported NetFlow version {} on input {} (source: {})", buf.getUnsignedShort(0),
-                        inputId,
-                        rawMessage.getRemoteAddress().getInetSocketAddress());
+                LOG.warn("Unsupported NetFlow version {} on input {} (source: {})", netFlowVersion, inputId, sender);
                 return null;
         }
     }
