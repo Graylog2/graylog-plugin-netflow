@@ -31,6 +31,7 @@ public class TemplateStore {
     // Future work file IO to add more field types, ==> do IPFix
     // Support for v9 was tested on a Cisco ASA 5500 and a Cisco Meraki MX84
 
+    // FIXME: This will grow indefinitely
     private final ConcurrentMap<Integer, TemplateRecord> idToRecord = new ConcurrentHashMap<>();
 
     // https://tools.ietf.org/html/rfc3954#section-8
