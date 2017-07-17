@@ -97,6 +97,7 @@ public class NetFlowV5Packet implements NetFlowPacket {
         this.samplingMode = samplingMode;
     }
 
+    @Override
     public Collection<NetFlow> getFlows() {
         return flows;
     }
