@@ -19,12 +19,11 @@ package org.graylog.plugins.netflow.codecs;
 
 import com.google.common.collect.Lists;
 import com.google.inject.assistedinject.Assisted;
-
 import org.graylog.plugins.netflow.NetFlowPluginModule;
 import org.graylog.plugins.netflow.flows.FlowException;
-import org.graylog.plugins.netflow.flows.NetFlowParser;
 import org.graylog.plugins.netflow.flows.NetFlow;
 import org.graylog.plugins.netflow.flows.NetFlowPacket;
+import org.graylog.plugins.netflow.flows.NetFlowParser;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.configuration.Configuration;
 import org.graylog2.plugin.configuration.ConfigurationRequest;
@@ -46,9 +45,9 @@ import java.util.List;
 
 @Codec(name = "netflow", displayName = "NetFlow")
 public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
-	
-	public TemplateStore v9templates = NetFlowPluginModule.getTemplateStore();
-	
+
+    public TemplateStore v9templates = NetFlowPluginModule.getTemplateStore();
+
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowCodec.class);
 
     @Inject
@@ -56,7 +55,7 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
         super(configuration);
     }
 
-	@Nullable
+    @Nullable
     @Override
     public Message decode(@Nonnull RawMessage rawMessage) {
         throw new UnsupportedOperationException("MultiMessageCodec " + getClass() + " does not support decode()");

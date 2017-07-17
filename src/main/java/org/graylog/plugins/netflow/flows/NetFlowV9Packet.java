@@ -18,10 +18,8 @@
 package org.graylog.plugins.netflow.flows;
 
 import com.google.common.base.MoreObjects;
-
 import com.google.common.collect.Lists;
 import io.netty.buffer.ByteBuf;
-
 import org.graylog.plugins.netflow.codecs.TemplateStore;
 import org.graylog.plugins.netflow.utils.UUIDs;
 import org.joda.time.DateTime;
@@ -102,10 +100,10 @@ public class NetFlowV9Packet implements NetFlowPacket {
     private long packetSequence;
     private int sessionId;
 
-    public NetFlowV9Packet(UUID id,InetSocketAddress sender,
-                           int length,long uptime,
-                           DateTime timestamp,List<NetFlow> flows,
-                           long packetSequence, 
+    public NetFlowV9Packet(UUID id, InetSocketAddress sender,
+                           int length, long uptime,
+                           DateTime timestamp, List<NetFlow> flows,
+                           long packetSequence,
                            int sessionId) {
 
         this.id = id;
@@ -118,12 +116,12 @@ public class NetFlowV9Packet implements NetFlowPacket {
         this.sessionId = sessionId;
     }
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public Collection getFlows() {
-		return flows; 
-		}
-	
-	@Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public Collection getFlows() {
+        return flows;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("id", id)
@@ -136,8 +134,8 @@ public class NetFlowV9Packet implements NetFlowPacket {
                 .add("engineId", sessionId)
                 .toString();
     }
-	
-	public static NetFlowV9Packet parse(InetSocketAddress sender, ByteBuf buf, TemplateStore v9templates) throws InvalidFlowVersionException, CorruptFlowPacketException {
+
+    public static NetFlowV9Packet parse(InetSocketAddress sender, ByteBuf buf, TemplateStore v9templates) throws InvalidFlowVersionException, CorruptFlowPacketException {
         // Check if we are looking at a Netflowv9 packet at all.
         final int version = (int) getUnsignedInteger(buf, 0, 2);
         if (version != 9) {
@@ -154,28 +152,28 @@ public class NetFlowV9Packet implements NetFlowPacket {
 
         int i = 20; // should start on 20th byte
         int numFlow = 0;
-        while(numFlow < (count) && i < buf.capacity()){        	
-        	int recordType = (int) getUnsignedInteger(buf, i, 2); 
-        	int recordLength = (int) getUnsignedInteger(buf, i+2, 2);
-        	ByteBuf subBuf = buf.slice(i, recordLength);
-        	Record record = null;
+        while (numFlow < (count) && i < buf.capacity()) {
+            int recordType = (int) getUnsignedInteger(buf, i, 2);
+            int recordLength = (int) getUnsignedInteger(buf, i + 2, 2);
+            ByteBuf subBuf = buf.slice(i, recordLength);
+            Record record = null;
 
-        	LOG.trace("recordType=[{}] recordLength=[{}] ", recordType, recordLength);
+            LOG.trace("recordType=[{}] recordLength=[{}] ", recordType, recordLength);
 
-        	if(isTemplateFlowSet(recordType)) {
+            if (isTemplateFlowSet(recordType)) {
                 parseTemplateRecords(subBuf, v9templates);
-            } else if(isOptionRecord(recordType)) {
-        		record = parseOptionRecord(subBuf,v9templates);
+            } else if (isOptionRecord(recordType)) {
+                record = parseOptionRecord(subBuf, v9templates);
             } else {
-        		record = parseDataRecords(subBuf,v9templates, id, sender, timestamp);
-        	}
-
-            if(!isTemplateFlowSet(recordType) && !isOptionRecord(recordType) && record != null) {
-            	flows.add(record);
+                record = parseDataRecords(subBuf, v9templates, id, sender, timestamp);
             }
 
-            i+=recordLength;
-            numFlow+=1;
+            if (!isTemplateFlowSet(recordType) && !isOptionRecord(recordType) && record != null) {
+                flows.add(record);
+            }
+
+            i += recordLength;
+            numFlow += 1;
 
             LOG.trace(
                     "numFlows=[{}], i=[{}], bufferCapacity=[{}], sessionId=[{}]. flowListLength=[{}]",
@@ -184,87 +182,87 @@ public class NetFlowV9Packet implements NetFlowPacket {
         }
 
         return new NetFlowV9Packet(
-        		id, sender, buf.readableBytes(), uptime, 
-        		timestamp, flows, packetSequence, sessionId
+                id, sender, buf.readableBytes(), uptime,
+                timestamp, flows, packetSequence, sessionId
         );
     }
 
     @Nullable
-	private static Record parseDataRecords(ByteBuf subBuf, TemplateStore v9templates, UUID id, InetSocketAddress sender, DateTime ts) {
-		int i = 0;
-		int flowSetId = (int) getUnsignedInteger(subBuf, i, 2);
-		i+=4;
+    private static Record parseDataRecords(ByteBuf subBuf, TemplateStore v9templates, UUID id, InetSocketAddress sender, DateTime ts) {
+        int i = 0;
+        int flowSetId = (int) getUnsignedInteger(subBuf, i, 2);
+        i += 4;
 
-		// Try to load the template.
-		TemplateRecord template = v9templates.getTemplate(flowSetId);
-		if(template == null) {
-		    return null;
+        // Try to load the template.
+        TemplateRecord template = v9templates.getTemplate(flowSetId);
+        if (template == null) {
+            return null;
         }
 
-		int fieldCount = template.getFieldCount();
-		List<Fieldv9> fields = template.getFields();
-		Iterator<Fieldv9> fieldIter = fields.iterator();
-		Fieldv9 field;
-		List<Fieldv9> dataList = Lists.newLinkedList();
-		for(int j = 0; j < fieldCount; j++){
-			if(fieldIter.hasNext()){ 
-				field = fieldIter.next();
-				dataList.add(field.getNewFieldWithValue(subBuf, i));
-				i+= field.getFieldLen();
-			}
-			 
+        int fieldCount = template.getFieldCount();
+        List<Fieldv9> fields = template.getFields();
+        Iterator<Fieldv9> fieldIter = fields.iterator();
+        Fieldv9 field;
+        List<Fieldv9> dataList = Lists.newLinkedList();
+        for (int j = 0; j < fieldCount; j++) {
+            if (fieldIter.hasNext()) {
+                field = fieldIter.next();
+                dataList.add(field.getNewFieldWithValue(subBuf, i));
+                i += field.getFieldLen();
+            }
+
         }
 
         return new DataRecord(id, sender, ts, dataList, v9templates);
     }
 
-	private static Record parseOptionRecord(ByteBuf subBuf, TemplateStore v9templates)  {
+    private static Record parseOptionRecord(ByteBuf subBuf, TemplateStore v9templates) {
         // No need to track options at this time
-		return null;
-	}
+        return null;
+    }
 
-	private static void parseTemplateRecords(ByteBuf subBuf, TemplateStore v9templates) {
-		int i = 0;
-		int templateID, fieldCount;
-		List<Fieldv9> fields;
+    private static void parseTemplateRecords(ByteBuf subBuf, TemplateStore v9templates) {
+        int i = 0;
+        int templateID, fieldCount;
+        List<Fieldv9> fields;
 
-		int rLength = (int) getUnsignedInteger(subBuf, i+2, 2);
+        int rLength = (int) getUnsignedInteger(subBuf, i + 2, 2);
 
-		i+=4;
-		while (i <= (rLength-1)){
-			templateID = (int) getUnsignedInteger(subBuf, i, 2);
-			fieldCount = (int) getUnsignedInteger(subBuf, i+2, 2);
-			i += 4;
-			fields = Lists.newLinkedList();
-			for (int numFields = 0; numFields < fieldCount; numFields+=1){
-				int fieldType = (int) getUnsignedInteger(subBuf, i, 2);
-				int fieldLength = (int) getUnsignedInteger(subBuf, i+2, 2);
-				i+=4;
+        i += 4;
+        while (i <= (rLength - 1)) {
+            templateID = (int) getUnsignedInteger(subBuf, i, 2);
+            fieldCount = (int) getUnsignedInteger(subBuf, i + 2, 2);
+            i += 4;
+            fields = Lists.newLinkedList();
+            for (int numFields = 0; numFields < fieldCount; numFields += 1) {
+                int fieldType = (int) getUnsignedInteger(subBuf, i, 2);
+                int fieldLength = (int) getUnsignedInteger(subBuf, i + 2, 2);
+                i += 4;
 
-				if(v9templates.isIP(fieldType)) {
+                if (v9templates.isIP(fieldType)) {
                     fields.add(new Fieldv9(fieldType, fieldLength, 1));
-                } else if(isParsable(fieldLength)) {
-				    fields.add(new Fieldv9(fieldType, fieldLength,0));
+                } else if (isParsable(fieldLength)) {
+                    fields.add(new Fieldv9(fieldType, fieldLength, 0));
                 } else {
-				    fields.add(new Fieldv9(fieldType, fieldLength,2));
+                    fields.add(new Fieldv9(fieldType, fieldLength, 2));
                 }
-			}
+            }
 
-			v9templates.putIdToRecord(new TemplateRecord(templateID, fieldCount, fields));
-		}
-	}
-	
-	private static boolean isParsable(int x) {
-		return (x==1 || x == 2 || x == 3 || x == 4 || x == 8);
-	}
+            v9templates.putIdToRecord(new TemplateRecord(templateID, fieldCount, fields));
+        }
+    }
 
-	private static boolean isOptionRecord(int recordType) {
-		return recordType == 1;
-	}
+    private static boolean isParsable(int x) {
+        return (x == 1 || x == 2 || x == 3 || x == 4 || x == 8);
+    }
 
-	private static boolean isTemplateFlowSet(int recordType) {
-		return recordType == 0;
-	}
+    private static boolean isOptionRecord(int recordType) {
+        return recordType == 1;
+    }
+
+    private static boolean isTemplateFlowSet(int recordType) {
+        return recordType == 0;
+    }
 
 }
 

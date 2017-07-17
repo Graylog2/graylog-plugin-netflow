@@ -39,7 +39,10 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class UUIDs {
 
-    private UUIDs() {};
+    private UUIDs() {
+    }
+
+    ;
 
     // http://www.ietf.org/rfc/rfc4122.txt
     private static final long START_EPOCH = makeEpoch();
@@ -103,7 +106,7 @@ public final class UUIDs {
 
             long node = 0;
             for (int i = 0; i < 6; i++)
-                node |= (0x00000000000000ffL & (long)hash[i]) << (i*8);
+                node |= (0x00000000000000ffL & (long) hash[i]) << (i * 8);
             // Since we don't use the mac address, the spec says that multicast
             // bit (least significant bit of the first byte of the node ID) must be 1.
             return node | 0x0000010000000000L;
@@ -175,7 +178,7 @@ public final class UUIDs {
      * are not necessarily lower bound for that latter method.
      *
      * @param timestamp the unix timestamp for which the created UUID must be a
-     * lower bound.
+     *                  lower bound.
      * @return the smallest (for Cassandra timeuuid sorting) UUID of {@code timestamp}.
      */
     public static UUID startOf(long timestamp) {
@@ -205,7 +208,7 @@ public final class UUIDs {
      * are not necessarily upper bound for that latter method.
      *
      * @param timestamp the unix timestamp for which the created UUID must be an
-     * upper bound.
+     *                  upper bound.
      * @return the biggest (for Cassandra timeuuid sorting) UUID of {@code timestamp}.
      */
     public static UUID endOf(long timestamp) {
@@ -228,7 +231,6 @@ public final class UUIDs {
      *
      * @param uuid the UUID to return the timestamp of.
      * @return the unix timestamp of {@code uuid}.
-     *
      * @throws IllegalArgumentException if {@code uuid} is not a version 1 UUID.
      */
     public static long unixTimestamp(UUID uuid) {

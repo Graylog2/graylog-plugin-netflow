@@ -17,49 +17,48 @@
 
 package org.graylog.plugins.netflow.flows;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import org.graylog2.plugin.Message;
 
-public class TemplateRecord extends Record{
-	private int templateID;
-	private int fieldCount; 
-	private List<Fieldv9> fields;
-	
-	public TemplateRecord(int templateID, int fieldCount, List<Fieldv9> fields) {
-		this.templateID=templateID;
-		this.fieldCount = fieldCount;
-		this.fields = fields;
-	}
+import javax.annotation.Nullable;
+import java.util.List;
 
-	public int getId(){
-		return this.templateID;		
-	}
+public class TemplateRecord extends Record {
+    private int templateID;
+    private int fieldCount;
+    private List<Fieldv9> fields;
 
-	@Override
-	@Nullable
-	public Message toMessage() {
-		return null;
-	}
+    public TemplateRecord(int templateID, int fieldCount, List<Fieldv9> fields) {
+        this.templateID = templateID;
+        this.fieldCount = fieldCount;
+        this.fields = fields;
+    }
 
-	@Override
-	public String toMessageString() {
-		return messageType();
-	}
+    public int getId() {
+        return this.templateID;
+    }
 
-	@Override
-	public String messageType() {
-		return "TemplateRecord";
-	}
+    @Override
+    @Nullable
+    public Message toMessage() {
+        return null;
+    }
 
-	public int getFieldCount() {
-		return fieldCount;
-	}
+    @Override
+    public String toMessageString() {
+        return messageType();
+    }
 
-	public List<Fieldv9> getFields() {
-		return this.fields;
-	}
+    @Override
+    public String messageType() {
+        return "TemplateRecord";
+    }
+
+    public int getFieldCount() {
+        return fieldCount;
+    }
+
+    public List<Fieldv9> getFields() {
+        return this.fields;
+    }
 
 }

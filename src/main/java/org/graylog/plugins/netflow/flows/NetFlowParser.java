@@ -19,7 +19,6 @@ package org.graylog.plugins.netflow.flows;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-
 import org.graylog.plugins.netflow.codecs.TemplateStore;
 import org.graylog2.plugin.journal.RawMessage;
 import org.slf4j.Logger;
@@ -35,9 +34,9 @@ public class NetFlowParser {
         final ByteBuf buf = Unpooled.wrappedBuffer(rawMessage.getPayload());
         switch (buf.getUnsignedShort(0)) {
             case 5:
-            	return NetFlowV5Packet.parse(sender, buf);
+                return NetFlowV5Packet.parse(sender, buf);
             case 9:
-            	return NetFlowV9Packet.parse(sender, buf, v9templates);
+                return NetFlowV9Packet.parse(sender, buf, v9templates);
             default:
                 final RawMessage.SourceNode sourceNode = rawMessage.getSourceNodes().get(rawMessage.getSourceNodes().size() - 1);
                 final String inputId = sourceNode == null ? "<unknown>" : sourceNode.inputId;

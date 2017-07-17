@@ -24,9 +24,6 @@ import org.graylog.plugins.netflow.codecs.TemplateStore;
 import org.graylog.plugins.netflow.inputs.NetFlowUdpInput;
 import org.graylog2.plugin.PluginConfigBean;
 import org.graylog2.plugin.PluginModule;
-import org.graylog2.plugin.inputs.codecs.Codec;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Set;
@@ -40,11 +37,14 @@ public class NetFlowPluginModule extends PluginModule {
      *
      * Implementing this method is optional. The default method returns an empty {@link Set}.
      */
-	public static TemplateStore v9templates = new TemplateStore();
-        //v9 support ; initialized singleton object to hold mappings of 
-	//fields	
-	public static TemplateStore getTemplateStore(){ return v9templates;}
-	
+    public static TemplateStore v9templates = new TemplateStore();
+
+    //v9 support ; initialized singleton object to hold mappings of
+    //fields
+    public static TemplateStore getTemplateStore() {
+        return v9templates;
+    }
+
     @Override
     public Set<? extends PluginConfigBean> getConfigBeans() {
         return Collections.emptySet();
@@ -52,8 +52,8 @@ public class NetFlowPluginModule extends PluginModule {
 
     @Override
     protected void configure() {
-    	//Class<? extends Codec> net = NetFlowCodec.class;
-     	addMessageInput(NetFlowUdpInput.class);
-        addCodec("netflow",  NetFlowCodec.class);
+        //Class<? extends Codec> net = NetFlowCodec.class;
+        addMessageInput(NetFlowUdpInput.class);
+        addCodec("netflow", NetFlowCodec.class);
     }
 }

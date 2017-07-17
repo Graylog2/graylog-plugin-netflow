@@ -146,12 +146,12 @@ public class NetFlowV5 implements NetFlow {
      * @param calculateSamples Switch to turn on/off samples calculation
      */
     public static NetFlow parse(final InetSocketAddress sender,
-                                  final ByteBuf buf,
-                                  final UUID fpId,
-                                  final long uptime,
-                                  final DateTime timestamp,
-                                  final int samplingInterval,
-                                  final boolean calculateSamples) {
+                                final ByteBuf buf,
+                                final UUID fpId,
+                                final long uptime,
+                                final DateTime timestamp,
+                                final int samplingInterval,
+                                final boolean calculateSamples) {
 
         final long pkts = getUnsignedInteger(buf, 16, 4);
         final long bytes = getUnsignedInteger(buf, 20, 4);
@@ -241,7 +241,7 @@ public class NetFlowV5 implements NetFlow {
 
     @Override
     public String toMessageString() {
-        return VERSION +" [" + srcAddress.getHostAddress() + "]:" + srcPort +
+        return VERSION + " [" + srcAddress.getHostAddress() + "]:" + srcPort +
                 " <> [" + dstAddress.getHostAddress() + "]:" + dstPort +
                 " proto:" + proto + " pkts:" + pkts + " bytes:" + bytes;
     }
