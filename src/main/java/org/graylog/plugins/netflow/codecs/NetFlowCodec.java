@@ -14,10 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/*
+* Created by Benjamin H. Klimkowski, bhklimk@gmail.com
+*/
+
 package org.graylog.plugins.netflow.codecs;
 
 import com.google.common.collect.Lists;
 import com.google.inject.assistedinject.Assisted;
+
+import org.graylog.plugins.netflow.NetFlowPluginModule;
 import org.graylog.plugins.netflow.flows.FlowException;
 import org.graylog.plugins.netflow.flows.NetFlowParser;
 import org.graylog.plugins.netflow.flows.NetFlow;
@@ -41,16 +48,26 @@ import javax.inject.Inject;
 import java.util.Collection;
 import java.util.List;
 
+import kafka.log.Log;
+
 @Codec(name = "netflow", displayName = "NetFlow")
 public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
-    private static final Logger LOG = LoggerFactory.getLogger(NetFlowCodec.class);
-
+	
+	public TemplateStore v9templates = NetFlowPluginModule.getTemplateStore();
+	
+    private static final Logger LOG = LoggerFactory.getLogger(NetFlowCodec.class);{
+    	LOG.warn("Netflow codex intialize");
+    }
     @Inject
     protected NetFlowCodec(@Assisted Configuration configuration) {
         super(configuration);
     }
 
-    @Nullable
+    public NetFlowCodec(@Assisted Configuration configuration, TemplateStore v9templates2) {
+    	 super(configuration);
+	}
+
+	@Nullable
     @Override
     public Message decode(@Nonnull RawMessage rawMessage) {
         throw new UnsupportedOperationException("MultiMessageCodec " + getClass() + " does not support decode()");
@@ -60,14 +77,13 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     @Override
     public Collection<Message> decodeMessages(@Nonnull RawMessage rawMessage) {
         try {
-            final NetFlowPacket packet = NetFlowParser.parse(rawMessage);
+            final NetFlowPacket packet = NetFlowParser.parse(rawMessage,v9templates);
 
             if (packet == null) {
                 return null;
             }
 
             final List<Message> messages = Lists.newArrayListWithCapacity(packet.getFlows().size());
-
             for (NetFlow flow : packet.getFlows()) {
                 messages.add(flow.toMessage());
             }

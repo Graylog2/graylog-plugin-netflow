@@ -14,10 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/*
+* Modified by Benjamin H. Klimkowski, bhklimk@gmail.com
+*/
 package org.graylog.plugins.netflow.flows;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+
+import org.graylog.plugins.netflow.codecs.TemplateStore;
 import org.graylog2.plugin.journal.RawMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,13 +33,17 @@ import java.net.InetSocketAddress;
 public class NetFlowParser {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowParser.class);
 
-    public static NetFlowPacket parse(RawMessage rawMessage) throws FlowException {
+    public static NetFlowPacket parse(RawMessage rawMessage, TemplateStore v9templates) throws FlowException {
         final InetSocketAddress sender = rawMessage.getRemoteAddress() != null ? rawMessage.getRemoteAddress().getInetSocketAddress() : null;
         final ByteBuf buf = Unpooled.wrappedBuffer(rawMessage.getPayload());
-
         switch (buf.getUnsignedShort(0)) {
             case 5:
-                return NetFlowV5Packet.parse(sender, buf);
+            	return NetFlowV5Packet.parse(sender, buf);
+            case 9:
+            	//This class is created by NetFlowCodec
+            	//NetFlowPlugModule calls NetFlowCodec
+            	//v9templates is a singleton to track v9 template flowSets
+            	return NetFlowV9Packet.parse(sender, buf, v9templates);
             default:
                 final RawMessage.SourceNode sourceNode = rawMessage.getSourceNodes().get(rawMessage.getSourceNodes().size() - 1);
                 final String inputId = sourceNode == null ? "<unknown>" : sourceNode.inputId;
