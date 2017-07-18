@@ -15,88 +15,87 @@
  */
 package org.graylog.plugins.netflow.v5;
 
+import com.google.common.collect.ImmutableList;
 import io.netty.buffer.ByteBuf;
+import org.graylog.plugins.netflow.flows.CorruptFlowPacketException;
+import org.graylog.plugins.netflow.flows.InvalidFlowVersionException;
+import org.graylog.plugins.netflow.utils.ByteBufUtils;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 
-/**
- * {@link http
- * ://www.cisco.com/en/US/docs/net_mgmt/netflow_collection_engine/3.6/
- * user/guide/format.html}
- * 
- * @since 0.1.0
- * @author xeraph
- */
+import static org.graylog.plugins.netflow.v5.NetFlowV5Header.HEADER_LENGTH;
+import static org.graylog.plugins.netflow.v5.NetFlowV5Record.RECORD_LENGTH;
+
 public class NetFlowV5Parser {
     public static NetFlowV5Packet parsePacket(ByteBuf bb) {
-        NetFlowV5Header header = parseHeader(bb.slice(0, 24));
-        List<NetFlowV5Record> records = new ArrayList<>();
+        final int readableBytes = bb.readableBytes();
 
-        int offset = 24;
-        for (int i = 0; i < header.getCount(); i++) {
-            records.add(parseRecord(bb.slice(offset, 48)));
-            offset += 48;
+        final NetFlowV5Header header = parseHeader(bb.slice(0, HEADER_LENGTH));
+        if (header.count() <= 0 || readableBytes < HEADER_LENGTH + header.count() * RECORD_LENGTH) {
+            throw new CorruptFlowPacketException();
         }
 
-        return new NetFlowV5Packet(header, records, offset);
+        final ImmutableList.Builder<NetFlowV5Record> records = ImmutableList.builder();
+        int offset = HEADER_LENGTH;
+        for (int i = 0; i < header.count(); i++) {
+            records.add(parseRecord(bb.slice(offset, RECORD_LENGTH)));
+            offset += RECORD_LENGTH;
+        }
+
+        return NetFlowV5Packet.create(header, records.build(), offset);
     }
 
     public static NetFlowV5Header parseHeader(ByteBuf bb) {
-        NetFlowV5Header h = new NetFlowV5Header();
-        h.setVersion(bb.readUnsignedShort());
-        h.setCount(bb.readUnsignedShort());
-        h.setSysUptime(bb.readUnsignedInt());
-        h.setUnixSecs(bb.readUnsignedInt());
-        h.setUnixNsecs(bb.readUnsignedInt());
-        h.setFlowSequence(bb.readUnsignedInt());
-        h.setEngineType(bb.readUnsignedByte());
-        h.setEngineId(bb.readUnsignedByte());
-        short s = bb.readShort();
-        h.setSamplingMode((s >> 14) & 3);
-        h.setSamplingInterval(s & 0x3fff);
-        return h;
+        final int version = bb.readUnsignedShort();
+        if (version != 5) {
+            throw new InvalidFlowVersionException(version);
+        }
+
+        final int count = bb.readUnsignedShort();
+        final long sysUptime = bb.readUnsignedInt();
+        final long unixSecs = bb.readUnsignedInt();
+        final long unixNsecs = bb.readUnsignedInt();
+        final long flowSequence = bb.readUnsignedInt();
+        final short engineType = bb.readUnsignedByte();
+        final short engineId = bb.readUnsignedByte();
+        final short sampling = bb.readShort();
+        final int samplingMode = (sampling >> 14) & 3;
+        final int samplingInterval = sampling & 0x3fff;
+
+        return NetFlowV5Header.create(
+                version,
+                count,
+                sysUptime,
+                unixSecs,
+                unixNsecs,
+                flowSequence,
+                engineType,
+                engineId,
+                samplingMode,
+                samplingInterval);
     }
 
     public static NetFlowV5Record parseRecord(ByteBuf bb) {
-        NetFlowV5Record r = new NetFlowV5Record();
-        byte[] srcAddr = new byte[4];
-        byte[] dstAddr = new byte[4];
-        byte[] nextHop = new byte[4];
-
-        bb.readBytes(srcAddr);
-        bb.readBytes(dstAddr);
-        bb.readBytes(nextHop);
-
-        r.setSrcAddr(parseIp(srcAddr));
-        r.setDstAddr(parseIp(dstAddr));
-        r.setNextHop(parseIp(nextHop));
-        r.setInputIface(bb.readUnsignedShort());
-        r.setOutputIface(bb.readUnsignedShort());
-        r.setPacketCount(bb.readUnsignedInt());
-        r.setOctetCount(bb.readUnsignedInt());
-        r.setFirst(bb.readUnsignedInt());
-        r.setLast(bb.readUnsignedInt());
-        r.setSrcPort(bb.readUnsignedShort());
-        r.setDstPort(bb.readUnsignedShort());
+        final InetAddress srcAddr = ByteBufUtils.readInetAddress(bb);
+        final InetAddress dstAddr = ByteBufUtils.readInetAddress(bb);
+        final InetAddress nextHop = ByteBufUtils.readInetAddress(bb);
+        final int inputIface = bb.readUnsignedShort();
+        final int outputIface = bb.readUnsignedShort();
+        final long packetCount = bb.readUnsignedInt();
+        final long octetCount = bb.readUnsignedInt();
+        final long first = bb.readUnsignedInt();
+        final long last = bb.readUnsignedInt();
+        final int srcPort = bb.readUnsignedShort();
+        final int dstPort = bb.readUnsignedShort();
         bb.readByte(); // unused pad1
-        r.setTcpFlags(bb.readByte());
-        r.setProtocol(bb.readUnsignedByte());
-        r.setTos(bb.readUnsignedByte());
-        r.setSrcAs(bb.readUnsignedShort());
-        r.setDstAs(bb.readUnsignedShort());
-        r.setSrcMask(bb.readUnsignedByte());
-        r.setDstMask(bb.readUnsignedByte());
-        return r;
-    }
+        final short tcpFlags = bb.readUnsignedByte();
+        final short protocol = bb.readUnsignedByte();
+        final short tos = bb.readUnsignedByte();
+        final int srcAs = bb.readUnsignedShort();
+        final int dstAs = bb.readUnsignedShort();
+        final short srcMask = bb.readUnsignedByte();
+        final short dstMask = bb.readUnsignedByte();
 
-    private static InetAddress parseIp(byte[] b) {
-        try {
-            return InetAddress.getByAddress(b);
-        } catch (UnknownHostException e) {
-            return null;
-        }
+        return NetFlowV5Record.create(srcAddr, dstAddr, nextHop, inputIface, outputIface, packetCount, octetCount, first, last, srcPort, dstPort, tcpFlags, protocol, tos, srcAs, dstAs, srcMask, dstMask);
     }
 }

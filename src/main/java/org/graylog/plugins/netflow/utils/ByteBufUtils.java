@@ -46,6 +46,17 @@ public class ByteBufUtils {
         final byte[] data = new byte[length];
         buf.getBytes(offset, data, 0, length);
 
+        return getInetAddress(data);
+    }
+
+    public static InetAddress readInetAddress(final ByteBuf buf) {
+        final byte[] data = new byte[4];
+        buf.readBytes(data);
+
+        return getInetAddress(data);
+    }
+
+    private static InetAddress getInetAddress(byte[] data) {
         InetAddress address;
         try {
             address = InetAddress.getByAddress(data);
