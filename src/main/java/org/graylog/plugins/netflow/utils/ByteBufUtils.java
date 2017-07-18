@@ -43,12 +43,8 @@ public class ByteBufUtils {
     }
 
     public static InetAddress getInetAddress(final ByteBuf buf, final int offset, final int length) {
-        final ByteBuf buffer = buf.slice(offset, length);
-
         final byte[] data = new byte[length];
-        for (int i = 1; i <= length; i++) {
-            data[i - 1] = (byte) buffer.readUnsignedByte();
-        }
+        buf.getBytes(offset, data, 0, length);
 
         InetAddress address;
         try {
