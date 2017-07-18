@@ -19,6 +19,7 @@ package org.graylog.plugins.netflow.flows;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import io.netty.buffer.Unpooled;
+import org.graylog.plugins.netflow.codecs.TemplateStore;
 import org.graylog2.plugin.Message;
 import org.joda.time.DateTime;
 import org.junit.Test;
@@ -33,13 +34,14 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class NetFlowV5PacketTest {
+public class NetFlowV9PacketTest {
     @Test
     public void test() throws Exception {
-        final URL resource = Resources.getResource("netflow-data/netflow-v5-1.dat");
+        final URL resource = Resources.getResource("netflow-data/netflow-v9-1.dat");
         final byte[] bytes = Resources.toByteArray(resource);
 
-        final NetFlowV5Packet packet = NetFlowV5Packet.parse(new InetSocketAddress("127.0.0.2", 2055), Unpooled.wrappedBuffer(bytes));
+        final TemplateStore templateStore = new TemplateStore();
+        final NetFlowV9Packet packet = NetFlowV9Packet.parse(new InetSocketAddress("127.0.0.2", 2055), Unpooled.wrappedBuffer(bytes), templateStore);
 
         final NetFlow flow1 = Lists.newArrayList(packet.getFlows()).get(0);
         final NetFlow flow2 = Lists.newArrayList(packet.getFlows()).get(1);
@@ -95,42 +97,5 @@ public class NetFlowV5PacketTest {
         assertEquals(new DateTime("2015-05-02T18:38:07.196Z", UTC), message2.getField("nf_stop"));
         assertEquals(304L, message2.getField("nf_bytes"));
         assertEquals(4L, message2.getField("nf_pkts"));
-    }
-
-    @Test
-    public void test2() throws Exception {
-        final URL resource = Resources.getResource("netflow-data/netflow-v5-2.dat");
-        final byte[] bytes = Resources.toByteArray(resource);
-
-        final NetFlowV5Packet packet = NetFlowV5Packet.parse(new InetSocketAddress("127.0.0.2", 2055), Unpooled.wrappedBuffer(bytes));
-
-        final ArrayList<NetFlow> flows = Lists.newArrayList(packet.getFlows());
-        final NetFlow flow1 = flows.get(0);
-        final Message message1 = flow1.toMessage();
-
-        assertEquals(30, flows.size());
-
-        assertEquals("127.0.0.2", message1.getSource());
-        assertEquals(5, message1.getField("nf_version"));
-        assertNotNull(message1.getField("nf_id"));
-        assertNotNull(message1.getField("nf_flow_packet_id"));
-        assertNotEquals(message1.getField("nf_id"), message1.getField("nf_flow_packet_id"));
-        assertEquals(0, message1.getField("nf_tos"));
-        assertEquals("14.63.211.15:80", message1.getField("nf_src"));
-        assertEquals("14.63.211.15", message1.getField("nf_src_address"));
-        assertEquals("192.168.124.20:47994", message1.getField("nf_dst"));
-        assertEquals("192.168.124.20", message1.getField("nf_dst_address"));
-        assertNull(message1.getField("nf_next_hop"));
-        assertEquals(80, message1.getField("nf_src_port"));
-        assertEquals(47994, message1.getField("nf_dst_port"));
-        assertEquals(0, message1.getField("nf_src_mask"));
-        assertEquals(0, message1.getField("nf_dst_mask"));
-        assertEquals(6, message1.getField("nf_proto"));
-        assertEquals("TCP", message1.getField("nf_proto_name"));
-        assertEquals(27, message1.getField("nf_tcp_flags"));
-        assertEquals(new DateTime("2013-05-20T02:31:45.479Z", UTC), message1.getField("nf_start"));
-        assertEquals(new DateTime("2013-05-20T02:31:45.998Z", UTC), message1.getField("nf_stop"));
-        assertEquals(317221L, message1.getField("nf_bytes"));
-        assertEquals(110L, message1.getField("nf_pkts"));
     }
 }
