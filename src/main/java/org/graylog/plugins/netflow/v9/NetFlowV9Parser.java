@@ -15,7 +15,8 @@
  */
 package org.graylog.plugins.netflow.v9;
 
-import java.nio.ByteBuffer;
+import io.netty.buffer.ByteBuf;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,164 +30,164 @@ import java.util.Map;
  * @author xeraph
  */
 public class NetFlowV9Parser {
-	public static NetFlowV9Packet parsePacket(byte[] b, NetFlowV9TemplateCache cache) {
-		NetFlowV9Packet p = new NetFlowV9Packet();
-		p.setDataLength(b.length);
-		ByteBuffer bb = ByteBuffer.wrap(b);
-		NetFlowV9Header h = parseHeader(bb);
+    public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9TemplateCache cache) {
+        NetFlowV9Packet p = new NetFlowV9Packet();
+        p.setDataLength(bb.readableBytes());
+        NetFlowV9Header header = parseHeader(bb);
 
-		p.setHeader(h);
+        p.setHeader(header);
 
-		while (bb.hasRemaining()) {
-			int flowSetId = bb.getShort() & 0xffff;
-			if (flowSetId == 0) {
-				List<NetFlowV9Template> tl = parseTemplates(bb);
-				for (NetFlowV9Template t : tl)
-					cache.getTemplates().put(t.getTemplateId(), t);
+        while (bb.isReadable()) {
+            bb.markReaderIndex();
+            int flowSetId = bb.readUnsignedShort();
+            if (flowSetId == 0) {
+                List<NetFlowV9Template> tl = parseTemplates(bb);
+                for (NetFlowV9Template t : tl)
+                    cache.getTemplates().put(t.getTemplateId(), t);
 
-				p.setTemplates(tl);
-			} else if (flowSetId == 1) {
-				NetFlowV9OptionTemplate optTemplate = parseOptionTemplate(bb);
-				p.setOptionTemplate(optTemplate);
-				cache.setOptionTemplate(optTemplate);
-			} else {
-				bb.position(bb.position() - 2);
-				List<NetFlowV9Record> r = parseRecords(bb, cache);
-				p.setRecords(r);
-			}
-		}
+                p.setTemplates(tl);
+            } else if (flowSetId == 1) {
+                NetFlowV9OptionTemplate optTemplate = parseOptionTemplate(bb);
+                p.setOptionTemplate(optTemplate);
+                cache.setOptionTemplate(optTemplate);
+            } else {
+                bb.resetReaderIndex();
+                List<NetFlowV9Record> r = parseRecords(bb, cache);
+                p.setRecords(r);
+            }
+        }
 
-		return p;
-	}
+        return p;
+    }
 
-	public static NetFlowV9Header parseHeader(ByteBuffer bb) {
-		NetFlowV9Header h = new NetFlowV9Header();
-		h.setVersion(bb.getShort() & 0xffff);
-		h.setCount(bb.getShort() & 0xffff);
-		h.setSysUptime(bb.getInt() & 0xffffffffl);
-		h.setUnixSecs(bb.getInt() & 0xffffffffl);
-		h.setSequence(bb.getInt() & 0xffffffffl);
-		h.setSourceId(bb.getInt() & 0xffffffffl);
+    public static NetFlowV9Header parseHeader(ByteBuf bb) {
+        NetFlowV9Header h = new NetFlowV9Header();
+        h.setVersion(bb.readUnsignedShort());
+        h.setCount(bb.readUnsignedShort());
+        h.setSysUptime(bb.readUnsignedInt());
+        h.setUnixSecs(bb.readUnsignedInt());
+        h.setSequence(bb.readUnsignedInt());
+        h.setSourceId(bb.readUnsignedInt());
 
-		return h;
-	}
+        return h;
+    }
 
-	public static List<NetFlowV9Template> parseTemplates(ByteBuffer bb) {
-		List<NetFlowV9Template> templates = new ArrayList<NetFlowV9Template>();
-		int len = bb.getShort() & 0xffff;
+    public static List<NetFlowV9Template> parseTemplates(ByteBuf bb) {
+        List<NetFlowV9Template> templates = new ArrayList<>();
+        int len = bb.readUnsignedShort();
 
-		int p = 4; // flow set id and length field itself
-		while (p < len) {
-			NetFlowV9Template t = new NetFlowV9Template();
-			t.setTemplateId(bb.getShort() & 0xffff);
-			t.setFieldCount(bb.getShort() & 0xffff);
+        int p = 4; // flow set id and length field itself
+        while (p < len) {
+            NetFlowV9Template t = new NetFlowV9Template();
+            t.setTemplateId(bb.readUnsignedShort());
+            t.setFieldCount(bb.readUnsignedShort());
 
-			for (int i = 0; i < t.getFieldCount(); i++) {
-				int fieldType = bb.getShort() & 0xffff;
-				int fieldLen = bb.getShort() & 0xffff;
-				NetFlowV9FieldType type = NetFlowV9FieldType.parse(fieldType);
-				t.getDefinitions().add(new NetFlowV9FieldDef(type, fieldLen));
-			}
+            for (int i = 0; i < t.getFieldCount(); i++) {
+                int fieldType = bb.readUnsignedShort();
+                int fieldLen = bb.readUnsignedShort();
+                NetFlowV9FieldType type = NetFlowV9FieldType.parse(fieldType);
+                t.getDefinitions().add(new NetFlowV9FieldDef(type, fieldLen));
+            }
 
-			templates.add(t);
-			p += 4 + t.getFieldCount() * 4;
-		}
+            templates.add(t);
+            p += 4 + t.getFieldCount() * 4;
+        }
 
-		return templates;
-	}
+        return templates;
+    }
 
-	public static NetFlowV9OptionTemplate parseOptionTemplate(ByteBuffer bb) {
-		NetFlowV9OptionTemplate optTemplate = new NetFlowV9OptionTemplate();
+    public static NetFlowV9OptionTemplate parseOptionTemplate(ByteBuf bb) {
+        NetFlowV9OptionTemplate optTemplate = new NetFlowV9OptionTemplate();
 
-		int length = bb.getShort() & 0xffff;
-		optTemplate.setTemplateId(bb.getShort() & 0xffff);
+        int length = bb.readUnsignedShort();
+        optTemplate.setTemplateId(bb.readUnsignedShort());
 
-		int optionScopeLength = bb.getShort() & 0xffff;
-		int optionLength = bb.getShort() & 0xffff;
+        int optionScopeLength = bb.readUnsignedShort();
+        int optionLength = bb.readUnsignedShort();
 
-		int p = bb.position();
-		int endOfScope = p + optionScopeLength;
-		int endOfOption = endOfScope + optionLength;
-		int endOfTemplate = p - 10 + length;
+        int p = bb.readerIndex();
+        int endOfScope = p + optionScopeLength;
+        int endOfOption = endOfScope + optionLength;
+        int endOfTemplate = p - 10 + length;
 
-		while (bb.position() < endOfScope) {
-			int scopeType = bb.getShort() & 0xffff;
-			int scopeLength = bb.getShort() & 0xffff;
-			optTemplate.getScopeDefs().add(new NetFlowV9ScopeDef(scopeType, scopeLength));
-		}
+        while (bb.readerIndex() < endOfScope) {
+            int scopeType = bb.readUnsignedShort();
+            int scopeLength = bb.readUnsignedShort();
+            optTemplate.getScopeDefs().add(new NetFlowV9ScopeDef(scopeType, scopeLength));
+        }
 
-		// skip padding
-		bb.position(endOfScope);
+        // skip padding
+        bb.readerIndex(endOfScope);
 
-		while (bb.position() < endOfOption) {
-			int optType = bb.getShort() & 0xffff;
-			int optLength = bb.getShort() & 0xffff;
-			NetFlowV9FieldType t = NetFlowV9FieldType.parse(optType);
-			optTemplate.getOptionDefs().add(new NetFlowV9FieldDef(t, optLength));
-		}
+        while (bb.readerIndex() < endOfOption) {
+            int optType = bb.readUnsignedShort();
+            int optLength = bb.readUnsignedShort();
+            NetFlowV9FieldType t = NetFlowV9FieldType.parse(optType);
+            optTemplate.getOptionDefs().add(new NetFlowV9FieldDef(t, optLength));
+        }
 
-		// skip padding
-		bb.position(endOfTemplate);
+        // skip padding
+        bb.readerIndex(endOfTemplate);
 
-		return optTemplate;
-	}
+        return optTemplate;
+    }
 
-	public static List<NetFlowV9Record> parseRecords(ByteBuffer bb, NetFlowV9TemplateCache cache) {
-		List<NetFlowV9Record> records = new ArrayList<NetFlowV9Record>();
-		int flowSetId = bb.getShort() & 0xffff;
-		int length = bb.getShort() & 0xffff;
-		int end = bb.position() - 4 + length;
+    public static List<NetFlowV9Record> parseRecords(ByteBuf bb, NetFlowV9TemplateCache cache) {
+        List<NetFlowV9Record> records = new ArrayList<>();
+        int flowSetId = bb.readUnsignedShort();
+        int length = bb.readUnsignedShort();
+        int end = bb.readerIndex() - 4 + length;
 
-		List<NetFlowV9FieldDef> defs = null;
+        List<NetFlowV9FieldDef> defs = null;
 
-		boolean isOptionTemplate = cache.getOptionTemplate() != null && cache.getOptionTemplate().getTemplateId() == flowSetId;
-		if (isOptionTemplate) {
-			defs = cache.getOptionTemplate().getOptionDefs();
-		} else {
-			NetFlowV9Template t = cache.getTemplates().get(flowSetId);
-			if (t == null)
-				return null;
-			defs = t.getDefinitions();
-		}
+        boolean isOptionTemplate = cache.getOptionTemplate() != null && cache.getOptionTemplate().getTemplateId() == flowSetId;
+        if (isOptionTemplate) {
+            defs = cache.getOptionTemplate().getOptionDefs();
+        } else {
+            NetFlowV9Template t = cache.getTemplates().get(flowSetId);
+            if (t == null)
+                return null;
+            defs = t.getDefinitions();
+        }
 
-		// calculate record unit size
-		int unitSize = 0;
-		for (NetFlowV9FieldDef def : defs)
-			unitSize += def.getLength();
+        // calculate record unit size
+        int unitSize = 0;
+        for (NetFlowV9FieldDef def : defs)
+            unitSize += def.getLength();
 
-		while (bb.position() < end && bb.remaining() >= unitSize) {
-			NetFlowV9Record r = null;
+        while (bb.readerIndex() < end && bb.readableBytes() >= unitSize) {
+            NetFlowV9Record r = null;
 
-			if (isOptionTemplate) {
-				NetFlowV9OptionRecord optRecord = new NetFlowV9OptionRecord();
-				for (NetFlowV9ScopeDef def : cache.getOptionTemplate().getScopeDefs()) {
-					int t = def.getType();
-					int len = def.getLength();
+            if (isOptionTemplate) {
+                NetFlowV9OptionRecord optRecord = new NetFlowV9OptionRecord();
+                for (NetFlowV9ScopeDef def : cache.getOptionTemplate().getScopeDefs()) {
+                    int t = def.getType();
+                    int len = def.getLength();
 
-					long l = 0;
-					for (int i = 0; i < len; i++) {
-						l <<= 8;
-						l |= bb.get() & 0xff;
-					}
+                    long l = 0;
+                    for (int i = 0; i < len; i++) {
+                        l <<= 8;
+                        l |= bb.readUnsignedByte();
+                    }
 
-					optRecord.getScopes().put(t, l);
-				}
+                    optRecord.getScopes().put(t, l);
+                }
 
-				r = optRecord;
-			} else
-				r = new NetFlowV9Record();
+                r = optRecord;
+            } else
+                r = new NetFlowV9Record();
 
-			Map<String, Object> fields = r.getFields();
-			for (NetFlowV9FieldDef def : defs) {
-				Object value = def.parse(bb);
-				String key = def.getType().name().toLowerCase();
-				fields.put(key, value);
-			}
+            Map<String, Object> fields = r.getFields();
+            for (NetFlowV9FieldDef def : defs) {
+                Object value = def.parse(bb);
+                String key = def.getType().name().toLowerCase();
+                fields.put(key, value);
+            }
 
-			records.add(r);
-		}
+            records.add(r);
+        }
 
-		bb.position(end);
-		return records;
-	}
+        bb.readerIndex(end);
+        return records;
+    }
 }

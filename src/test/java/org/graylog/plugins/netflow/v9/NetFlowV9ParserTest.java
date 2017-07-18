@@ -16,6 +16,7 @@
 package org.graylog.plugins.netflow.v9;
 
 import com.google.common.io.Resources;
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -39,7 +40,7 @@ public class NetFlowV9ParserTest {
 		NetFlowV9TemplateCache cache = new NetFlowV9TemplateCache();
 
 		// check header
-		NetFlowV9Packet p1 = NetFlowV9Parser.parsePacket(b1, cache);
+		NetFlowV9Packet p1 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b1), cache);
 		assertEquals(9, p1.getHeader().getVersion());
 		assertEquals(3, p1.getHeader().getCount());
 		assertEquals(0, p1.getHeader().getSequence());
@@ -79,7 +80,7 @@ public class NetFlowV9ParserTest {
 		assertEquals(258, t2.getTemplateId());
 		assertEquals(18, t2.getFieldCount());
 
-		NetFlowV9Packet p2 = NetFlowV9Parser.parsePacket(b2, cache);
+		NetFlowV9Packet p2 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b2), cache);
 		NetFlowV9Record r2 = p2.getRecords().get(0);
 		Map<String, Object> f2 = r2.getFields();
 		assertEquals(2818L, f2.get("in_bytes"));
@@ -90,7 +91,7 @@ public class NetFlowV9ParserTest {
 		assertEquals(1900, f2.get("l4_dst_port"));
 		assertEquals(17, f2.get("protocol"));
 
-		NetFlowV9Packet p3 = NetFlowV9Parser.parsePacket(b3, cache);
+		NetFlowV9Packet p3 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b3), cache);
 		assertEquals(1, p3.getRecords().size());
 	}
 

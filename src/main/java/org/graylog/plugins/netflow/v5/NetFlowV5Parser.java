@@ -15,10 +15,12 @@
  */
 package org.graylog.plugins.netflow.v5;
 
+import io.netty.buffer.ByteBuf;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * {@link http
@@ -29,74 +31,72 @@ import java.util.ArrayList;
  * @author xeraph
  */
 public class NetFlowV5Parser {
-	public static NetFlowV5Packet parsePacket(byte[] b) {
-		NetFlowV5Header h = parseHeader(b, 0, 24);
-		ArrayList<NetFlowV5Record> records = new ArrayList<NetFlowV5Record>();
+    public static NetFlowV5Packet parsePacket(ByteBuf bb) {
+        NetFlowV5Header header = parseHeader(bb.slice(0, 24));
+        List<NetFlowV5Record> records = new ArrayList<>();
 
-		int offset = 24;
-		for (int i = 0; i < h.getCount(); i++) {
-			records.add(parseRecord(b, offset, 48));
-			offset += 48;
-		}
+        int offset = 24;
+        for (int i = 0; i < header.getCount(); i++) {
+            records.add(parseRecord(bb.slice(offset, 48)));
+            offset += 48;
+        }
 
-		return new NetFlowV5Packet(h, records, b.length);
-	}
+        return new NetFlowV5Packet(header, records, offset);
+    }
 
-	public static NetFlowV5Header parseHeader(byte[] b, int offset, int length) {
-		NetFlowV5Header h = new NetFlowV5Header();
-		ByteBuffer bb = ByteBuffer.wrap(b);
-		h.setVersion(bb.getShort() & 0xffff);
-		h.setCount(bb.getShort() & 0xffff);
-		h.setSysUptime(bb.getInt() & 0xffffffffl);
-		h.setUnixSecs(bb.getInt() & 0xffffffffl);
-		h.setUnixNsecs(bb.getInt() & 0xffffffffl);
-		h.setFlowSequence(bb.getInt() & 0xffffffffl);
-		h.setEngineType(bb.get() & 0xff);
-		h.setEngineId(bb.get() & 0xff);
-		short s = bb.getShort();
-		h.setSamplingMode((s >> 14) & 3);
-		h.setSamplingInterval(s & 0x3fff);
-		return h;
-	}
+    public static NetFlowV5Header parseHeader(ByteBuf bb) {
+        NetFlowV5Header h = new NetFlowV5Header();
+        h.setVersion(bb.readUnsignedShort());
+        h.setCount(bb.readUnsignedShort());
+        h.setSysUptime(bb.readUnsignedInt());
+        h.setUnixSecs(bb.readUnsignedInt());
+        h.setUnixNsecs(bb.readUnsignedInt());
+        h.setFlowSequence(bb.readUnsignedInt());
+        h.setEngineType(bb.readUnsignedByte());
+        h.setEngineId(bb.readUnsignedByte());
+        short s = bb.readShort();
+        h.setSamplingMode((s >> 14) & 3);
+        h.setSamplingInterval(s & 0x3fff);
+        return h;
+    }
 
-	public static NetFlowV5Record parseRecord(byte[] b, int offset, int length) {
-		ByteBuffer bb = ByteBuffer.wrap(b, offset, length);
-		NetFlowV5Record r = new NetFlowV5Record();
-		byte[] srcAddr = new byte[4];
-		byte[] dstAddr = new byte[4];
-		byte[] nextHop = new byte[4];
+    public static NetFlowV5Record parseRecord(ByteBuf bb) {
+        NetFlowV5Record r = new NetFlowV5Record();
+        byte[] srcAddr = new byte[4];
+        byte[] dstAddr = new byte[4];
+        byte[] nextHop = new byte[4];
 
-		bb.get(srcAddr);
-		bb.get(dstAddr);
-		bb.get(nextHop);
+        bb.readBytes(srcAddr);
+        bb.readBytes(dstAddr);
+        bb.readBytes(nextHop);
 
-		r.setSrcAddr(parseIp(srcAddr));
-		r.setDstAddr(parseIp(dstAddr));
-		r.setNextHop(parseIp(nextHop));
-		r.setInputIface(bb.getShort() & 0xffff);
-		r.setOutputIface(bb.getShort() & 0xffff);
-		r.setPacketCount(bb.getInt() & 0xffffffffl);
-		r.setOctetCount(bb.getInt() & 0xffffffffl);
-		r.setFirst(bb.getInt() & 0xffffffffl);
-		r.setLast(bb.getInt() & 0xffffffffl);
-		r.setSrcPort(bb.getShort() & 0xffff);
-		r.setDstPort(bb.getShort() & 0xffff);
-		bb.get(); // unused pad1
-		r.setTcpFlags(bb.get());
-		r.setProtocol(bb.get() & 0xff);
-		r.setTos(bb.get() & 0xff);
-		r.setSrcAs(bb.getShort() & 0xffff);
-		r.setDstAs(bb.getShort() & 0xffff);
-		r.setSrcMask(bb.get() & 0xff);
-		r.setDstMask(bb.get() & 0xff);
-		return r;
-	}
+        r.setSrcAddr(parseIp(srcAddr));
+        r.setDstAddr(parseIp(dstAddr));
+        r.setNextHop(parseIp(nextHop));
+        r.setInputIface(bb.readUnsignedShort());
+        r.setOutputIface(bb.readUnsignedShort());
+        r.setPacketCount(bb.readUnsignedInt());
+        r.setOctetCount(bb.readUnsignedInt());
+        r.setFirst(bb.readUnsignedInt());
+        r.setLast(bb.readUnsignedInt());
+        r.setSrcPort(bb.readUnsignedShort());
+        r.setDstPort(bb.readUnsignedShort());
+        bb.readByte(); // unused pad1
+        r.setTcpFlags(bb.readByte());
+        r.setProtocol(bb.readUnsignedByte());
+        r.setTos(bb.readUnsignedByte());
+        r.setSrcAs(bb.readUnsignedShort());
+        r.setDstAs(bb.readUnsignedShort());
+        r.setSrcMask(bb.readUnsignedByte());
+        r.setDstMask(bb.readUnsignedByte());
+        return r;
+    }
 
-	private static InetAddress parseIp(byte[] b) {
-		try {
-			return InetAddress.getByAddress(b);
-		} catch (UnknownHostException e) {
-			return null;
-		}
-	}
+    private static InetAddress parseIp(byte[] b) {
+        try {
+            return InetAddress.getByAddress(b);
+        } catch (UnknownHostException e) {
+            return null;
+        }
+    }
 }

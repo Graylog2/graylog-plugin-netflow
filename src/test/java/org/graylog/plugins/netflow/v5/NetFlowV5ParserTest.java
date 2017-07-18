@@ -16,6 +16,7 @@
 package org.graylog.plugins.netflow.v5;
 
 import com.google.common.io.Resources;
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -33,7 +34,7 @@ public class NetFlowV5ParserTest {
 	@Test
 	public void testParse1() throws IOException {
 		final byte[] b = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v5-1.dat"));
-		NetFlowV5Packet packet = NetFlowV5Parser.parsePacket(b);
+		NetFlowV5Packet packet = NetFlowV5Parser.parsePacket(Unpooled.wrappedBuffer(b));
 		assertNotNull(packet);
 
 		NetFlowV5Header h = packet.getHeader();
@@ -91,7 +92,7 @@ public class NetFlowV5ParserTest {
 	@Test
 	public void testParse2() throws IOException {
 		final byte[] b = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v5-2.dat"));
-		NetFlowV5Packet packet = NetFlowV5Parser.parsePacket(b);
+		NetFlowV5Packet packet = NetFlowV5Parser.parsePacket(Unpooled.wrappedBuffer(b));
 		assertNotNull(packet);
 
 		NetFlowV5Header h = packet.getHeader();
