@@ -17,7 +17,6 @@
 
 package org.graylog.plugins.netflow.flows;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.graylog.plugins.netflow.codecs.TemplateStore;
 import org.graylog2.plugin.ResolvableInetSocketAddress;
@@ -36,13 +35,20 @@ public class NetFlowParser {
     public static NetFlowPacket parse(RawMessage rawMessage, TemplateStore v9templates) throws FlowException {
         final ResolvableInetSocketAddress remoteAddress = rawMessage.getRemoteAddress();
         final InetSocketAddress sender = remoteAddress != null ? remoteAddress.getInetSocketAddress() : null;
-        final ByteBuf buf = Unpooled.wrappedBuffer(rawMessage.getPayload());
-        final int netFlowVersion = buf.getUnsignedShort(0);
+
+        final byte[] payload = rawMessage.getPayload();
+        if(payload.length < 2) {
+            LOG.debug("NetFlow message (source: {}) doesn't even fit the NetFlow version (size: {} bytes)",
+                    sender, payload.length);
+            return null;
+        }
+
+        final int netFlowVersion = (payload[0] << 8) + payload[1];
         switch (netFlowVersion) {
             case 5:
-                return NetFlowV5Packet.parse(sender, buf);
+                return NetFlowV5Packet.parse(sender, Unpooled.wrappedBuffer(payload));
             case 9:
-                return NetFlowV9Packet.parse(sender, buf, v9templates);
+                return NetFlowV9Packet.parse(sender, Unpooled.wrappedBuffer(payload), v9templates);
             default:
                 final List<RawMessage.SourceNode> sourceNodes = rawMessage.getSourceNodes();
                 final RawMessage.SourceNode sourceNode = sourceNodes.isEmpty() ? null : sourceNodes.get(sourceNodes.size() - 1);
