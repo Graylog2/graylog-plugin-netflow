@@ -6,7 +6,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,12 +25,14 @@ import org.graylog2.plugin.journal.RawMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
 import java.util.List;
 
 public class NetFlowParser {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowParser.class);
 
+    @Nullable
     public static NetFlowPacket parse(RawMessage rawMessage, TemplateStore v9templates) throws FlowException {
         final ResolvableInetSocketAddress remoteAddress = rawMessage.getRemoteAddress();
         final InetSocketAddress sender = remoteAddress != null ? remoteAddress.getInetSocketAddress() : null;
@@ -43,7 +45,7 @@ public class NetFlowParser {
                 return NetFlowV9Packet.parse(sender, buf, v9templates);
             default:
                 final List<RawMessage.SourceNode> sourceNodes = rawMessage.getSourceNodes();
-                final RawMessage.SourceNode sourceNode = sourceNodes.get(sourceNodes.size() - 1);
+                final RawMessage.SourceNode sourceNode = sourceNodes.isEmpty() ? null : sourceNodes.get(sourceNodes.size() - 1);
                 final String inputId = sourceNode == null ? "<unknown>" : sourceNode.inputId;
                 LOG.warn("Unsupported NetFlow version {} on input {} (source: {})", netFlowVersion, inputId, sender);
                 return null;
