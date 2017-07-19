@@ -15,62 +15,35 @@
  */
 package org.graylog.plugins.netflow.v9;
 
-import java.util.ArrayList;
+import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
+
+import javax.annotation.Nullable;
 import java.util.List;
 
-/**
- * @since 0.1.0
- * @author xeraph
- */
-public class NetFlowV9Packet {
-	private NetFlowV9Header header;
-	private List<NetFlowV9Template> templates = new ArrayList<NetFlowV9Template>();
-	private NetFlowV9OptionTemplate optionTemplate;
-	private List<NetFlowV9Record> records = new ArrayList<NetFlowV9Record>();
-	private long dataLength;
+@AutoValue
+public abstract class NetFlowV9Packet {
+    public abstract NetFlowV9Header header();
 
-	public NetFlowV9Header getHeader() {
-		return header;
-	}
+    public abstract ImmutableList<NetFlowV9Template> templates();
 
-	public void setHeader(NetFlowV9Header header) {
-		this.header = header;
-	}
+    @Nullable
+    public abstract NetFlowV9OptionTemplate optionTemplate();
 
-	public List<NetFlowV9Template> getTemplates() {
-		return templates;
-	}
+    public abstract ImmutableList<NetFlowV9BaseRecord> records();
 
-	public void setTemplates(List<NetFlowV9Template> templates) {
-		this.templates = templates;
-	}
+    public abstract long dataLength();
 
-	public NetFlowV9OptionTemplate getOptionTemplate() {
-		return optionTemplate;
-	}
+    public static NetFlowV9Packet create(NetFlowV9Header header,
+                                         List<NetFlowV9Template> templates,
+                                         @Nullable NetFlowV9OptionTemplate optionTemplate,
+                                         List<NetFlowV9BaseRecord> records,
+                                         long dataLength) {
+        return new AutoValue_NetFlowV9Packet(header, ImmutableList.copyOf(templates), optionTemplate, ImmutableList.copyOf(records), dataLength);
+    }
 
-	public void setOptionTemplate(NetFlowV9OptionTemplate optionTemplate) {
-		this.optionTemplate = optionTemplate;
-	}
-
-	public List<NetFlowV9Record> getRecords() {
-		return records;
-	}
-
-	public void setRecords(List<NetFlowV9Record> records) {
-		this.records = records;
-	}
-
-	public long getDataLength() {
-		return dataLength;
-	}
-
-	public void setDataLength(long dataLength) {
-		this.dataLength = dataLength;
-	}
-
-	@Override
-	public String toString() {
-		return header.toString();
-	}
+    @Override
+    public String toString() {
+        return header().toString();
+    }
 }

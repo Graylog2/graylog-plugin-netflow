@@ -19,11 +19,7 @@ import com.google.common.io.Resources;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
@@ -41,22 +37,22 @@ public class NetFlowV9ParserTest {
 
 		// check header
 		NetFlowV9Packet p1 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b1), cache);
-		assertEquals(9, p1.getHeader().getVersion());
-		assertEquals(3, p1.getHeader().getCount());
-		assertEquals(0, p1.getHeader().getSequence());
-		assertEquals(42212, p1.getHeader().getSysUptime());
-		assertEquals(1369122709, p1.getHeader().getUnixSecs());
-		assertEquals(106, p1.getHeader().getSourceId());
+		assertEquals(9, p1.header().version());
+		assertEquals(3, p1.header().count());
+		assertEquals(0, p1.header().sequence());
+		assertEquals(42212, p1.header().sysUptime());
+		assertEquals(1369122709, p1.header().unixSecs());
+		assertEquals(106, p1.header().sourceId());
 
 		// check templates
-		assertEquals(2, p1.getTemplates().size());
-		assertNotNull(p1.getOptionTemplate());
+		assertEquals(2, p1.templates().size());
+		assertNotNull(p1.optionTemplate());
 
-		NetFlowV9Template t1 = p1.getTemplates().get(0);
-		assertEquals(257, t1.getTemplateId());
-		assertEquals(18, t1.getFieldCount());
+		NetFlowV9Template t1 = p1.templates().get(0);
+		assertEquals(257, t1.templateId());
+		assertEquals(18, t1.fieldCount());
 
-		List<NetFlowV9FieldDef> d1 = t1.getDefinitions();
+		List<NetFlowV9FieldDef> d1 = t1.definitions();
 		assertEquals("in_bytes", name(d1.get(0)));
 		assertEquals("in_pkts", name(d1.get(1)));
 		assertEquals("protocol", name(d1.get(2)));
@@ -76,13 +72,13 @@ public class NetFlowV9ParserTest {
 		assertEquals("last_switched", name(d1.get(16)));
 		assertEquals("first_switched", name(d1.get(17)));
 
-		NetFlowV9Template t2 = p1.getTemplates().get(1);
-		assertEquals(258, t2.getTemplateId());
-		assertEquals(18, t2.getFieldCount());
+		NetFlowV9Template t2 = p1.templates().get(1);
+		assertEquals(258, t2.templateId());
+		assertEquals(18, t2.fieldCount());
 
 		NetFlowV9Packet p2 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b2), cache);
-		NetFlowV9Record r2 = p2.getRecords().get(0);
-		Map<String, Object> f2 = r2.getFields();
+		NetFlowV9BaseRecord r2 = p2.records().get(0);
+		Map<String, Object> f2 = r2.fields();
 		assertEquals(2818L, f2.get("in_bytes"));
 		assertEquals(8L, f2.get("in_pkts"));
 		assertEquals("192.168.124.1", f2.get("ipv4_src_addr"));
@@ -92,10 +88,10 @@ public class NetFlowV9ParserTest {
 		assertEquals(17, f2.get("protocol"));
 
 		NetFlowV9Packet p3 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b3), cache);
-		assertEquals(1, p3.getRecords().size());
+		assertEquals(1, p3.records().size());
 	}
 
 	private String name(NetFlowV9FieldDef def) {
-		return def.getType().name().toLowerCase();
+		return def.type().name().toLowerCase();
 	}
 }

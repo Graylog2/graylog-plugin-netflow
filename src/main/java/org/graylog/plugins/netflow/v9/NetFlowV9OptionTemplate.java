@@ -15,40 +15,22 @@
  */
 package org.graylog.plugins.netflow.v9;
 
-import java.util.ArrayList;
+import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
+
 import java.util.List;
 
-/**
- * @since 0.1.0
- * @author xeraph
- */
-public class NetFlowV9OptionTemplate {
-	private int templateId;
+@AutoValue
+public abstract class NetFlowV9OptionTemplate {
+    public abstract int templateId();
 
-	private List<NetFlowV9ScopeDef> scopeDefs = new ArrayList<NetFlowV9ScopeDef>();
-	private List<NetFlowV9FieldDef> optionDefs = new ArrayList<NetFlowV9FieldDef>();
+    public abstract ImmutableList<NetFlowV9ScopeDef> scopeDefs();
 
-	public int getTemplateId() {
-		return templateId;
-	}
+    public abstract ImmutableList<NetFlowV9FieldDef> optionDefs();
 
-	public void setTemplateId(int templateId) {
-		this.templateId = templateId;
-	}
-
-	public List<NetFlowV9ScopeDef> getScopeDefs() {
-		return scopeDefs;
-	}
-
-	public void setScopeDefs(List<NetFlowV9ScopeDef> scopeDefs) {
-		this.scopeDefs = scopeDefs;
-	}
-
-	public List<NetFlowV9FieldDef> getOptionDefs() {
-		return optionDefs;
-	}
-
-	public void setOptionDefs(List<NetFlowV9FieldDef> optionDefs) {
-		this.optionDefs = optionDefs;
-	}
+    public static NetFlowV9OptionTemplate create(int templateId,
+                                                 List<NetFlowV9ScopeDef> scopeDefs,
+                                                 List<NetFlowV9FieldDef> optionDefs) {
+        return new AutoValue_NetFlowV9OptionTemplate(templateId, ImmutableList.copyOf(scopeDefs), ImmutableList.copyOf(optionDefs));
+    }
 }

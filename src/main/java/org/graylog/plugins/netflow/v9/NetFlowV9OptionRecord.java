@@ -15,21 +15,19 @@
  */
 package org.graylog.plugins.netflow.v9;
 
-import java.util.HashMap;
+import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableMap;
+
 import java.util.Map;
 
-/**
- * @since 0.1.0
- * @author xeraph
- */
-public class NetFlowV9OptionRecord extends NetFlowV9Record {
-	private Map<Integer, Object> scopes = new HashMap<Integer, Object>();
+@AutoValue
+public abstract class NetFlowV9OptionRecord implements NetFlowV9BaseRecord {
+    @Override
+    public abstract ImmutableMap<String, Object> fields();
 
-	public Map<Integer, Object> getScopes() {
-		return scopes;
-	}
+    public abstract ImmutableMap<Integer, Object> scopes();
 
-	public void setScopes(Map<Integer, Object> scopes) {
-		this.scopes = scopes;
-	}
+    public static NetFlowV9OptionRecord create(Map<String, Object> fields, Map<Integer, Object> scopes) {
+        return new AutoValue_NetFlowV9OptionRecord(ImmutableMap.copyOf(fields), ImmutableMap.copyOf(scopes));
+    }
 }

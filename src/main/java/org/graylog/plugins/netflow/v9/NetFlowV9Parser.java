@@ -15,92 +15,94 @@
  */
 package org.graylog.plugins.netflow.v9;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.netty.buffer.ByteBuf;
+import org.graylog.plugins.netflow.flows.InvalidFlowVersionException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
-/**
- * 
- * {@link http://www.cisco.com/en/US/technologies/tk648/tk362/
- * technologies_white_paper09186a00800a3db9_ps6601_Products_White_Paper.html}
- * 
- * @since 0.1.0
- * @author xeraph
- */
+
 public class NetFlowV9Parser {
     public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9TemplateCache cache) {
-        NetFlowV9Packet p = new NetFlowV9Packet();
-        p.setDataLength(bb.readableBytes());
-        NetFlowV9Header header = parseHeader(bb);
+        final int dataLength = bb.readableBytes();
+        final NetFlowV9Header header = parseHeader(bb);
 
-        p.setHeader(header);
-
+        List<NetFlowV9Template> templates = Collections.emptyList();
+        NetFlowV9OptionTemplate optTemplate = null;
+        List<NetFlowV9BaseRecord> records = Collections.emptyList();
         while (bb.isReadable()) {
             bb.markReaderIndex();
             int flowSetId = bb.readUnsignedShort();
             if (flowSetId == 0) {
-                List<NetFlowV9Template> tl = parseTemplates(bb);
-                for (NetFlowV9Template t : tl)
-                    cache.getTemplates().put(t.getTemplateId(), t);
-
-                p.setTemplates(tl);
+                templates = parseTemplates(bb);
+                for (NetFlowV9Template t : templates) {
+                    cache.getTemplates().put(t.templateId(), t);
+                }
             } else if (flowSetId == 1) {
-                NetFlowV9OptionTemplate optTemplate = parseOptionTemplate(bb);
-                p.setOptionTemplate(optTemplate);
+                optTemplate = parseOptionTemplate(bb);
                 cache.setOptionTemplate(optTemplate);
             } else {
                 bb.resetReaderIndex();
-                List<NetFlowV9Record> r = parseRecords(bb, cache);
-                p.setRecords(r);
+                records = parseRecords(bb, cache);
             }
         }
 
-        return p;
+        return NetFlowV9Packet.create(
+                header,
+                templates,
+                optTemplate,
+                records,
+                dataLength);
     }
 
     public static NetFlowV9Header parseHeader(ByteBuf bb) {
-        NetFlowV9Header h = new NetFlowV9Header();
-        h.setVersion(bb.readUnsignedShort());
-        h.setCount(bb.readUnsignedShort());
-        h.setSysUptime(bb.readUnsignedInt());
-        h.setUnixSecs(bb.readUnsignedInt());
-        h.setSequence(bb.readUnsignedInt());
-        h.setSourceId(bb.readUnsignedInt());
+        final int version = bb.readUnsignedShort();
+        if (version != 9) {
+            throw new InvalidFlowVersionException(version);
+        }
 
-        return h;
+        final int count = bb.readUnsignedShort();
+        final long sysUptime = bb.readUnsignedInt();
+        final long unixSecs = bb.readUnsignedInt();
+        final long sequence = bb.readUnsignedInt();
+        final long sourceId = bb.readUnsignedInt();
+
+        return NetFlowV9Header.create(version, count, sysUptime, unixSecs, sequence, sourceId);
     }
 
     public static List<NetFlowV9Template> parseTemplates(ByteBuf bb) {
-        List<NetFlowV9Template> templates = new ArrayList<>();
+        final ImmutableList.Builder<NetFlowV9Template> templates = ImmutableList.builder();
         int len = bb.readUnsignedShort();
 
         int p = 4; // flow set id and length field itself
         while (p < len) {
-            NetFlowV9Template t = new NetFlowV9Template();
-            t.setTemplateId(bb.readUnsignedShort());
-            t.setFieldCount(bb.readUnsignedShort());
-
-            for (int i = 0; i < t.getFieldCount(); i++) {
+            final int templateId = bb.readUnsignedShort();
+            final int fieldCount = bb.readUnsignedShort();
+            final ImmutableList.Builder<NetFlowV9FieldDef> fieldDefs = ImmutableList.builder();
+            for (int i = 0; i < fieldCount; i++) {
                 int fieldType = bb.readUnsignedShort();
                 int fieldLen = bb.readUnsignedShort();
-                NetFlowV9FieldType type = NetFlowV9FieldType.parse(fieldType);
-                t.getDefinitions().add(new NetFlowV9FieldDef(type, fieldLen));
+                final NetFlowV9FieldType type = NetFlowV9FieldType.parse(fieldType);
+                final NetFlowV9FieldDef fieldDef = NetFlowV9FieldDef.create(type, fieldLen);
+                fieldDefs.add(fieldDef);
             }
 
-            templates.add(t);
-            p += 4 + t.getFieldCount() * 4;
+            final NetFlowV9Template template = NetFlowV9Template.create(templateId, fieldCount, fieldDefs.build());
+            templates.add(template);
+
+            p += 4 + template.fieldCount() * 4;
         }
 
-        return templates;
+        return templates.build();
     }
 
     public static NetFlowV9OptionTemplate parseOptionTemplate(ByteBuf bb) {
-        NetFlowV9OptionTemplate optTemplate = new NetFlowV9OptionTemplate();
-
         int length = bb.readUnsignedShort();
-        optTemplate.setTemplateId(bb.readUnsignedShort());
+        final int templateId = bb.readUnsignedShort();
 
         int optionScopeLength = bb.readUnsignedShort();
         int optionLength = bb.readUnsignedShort();
@@ -110,59 +112,68 @@ public class NetFlowV9Parser {
         int endOfOption = endOfScope + optionLength;
         int endOfTemplate = p - 10 + length;
 
+        final ImmutableList.Builder<NetFlowV9ScopeDef> scopeDefs = ImmutableList.builder();
         while (bb.readerIndex() < endOfScope) {
             int scopeType = bb.readUnsignedShort();
             int scopeLength = bb.readUnsignedShort();
-            optTemplate.getScopeDefs().add(new NetFlowV9ScopeDef(scopeType, scopeLength));
+            scopeDefs.add(NetFlowV9ScopeDef.create(scopeType, scopeLength));
         }
 
         // skip padding
         bb.readerIndex(endOfScope);
 
+        final ImmutableList.Builder<NetFlowV9FieldDef> optionDefs = ImmutableList.builder();
         while (bb.readerIndex() < endOfOption) {
             int optType = bb.readUnsignedShort();
             int optLength = bb.readUnsignedShort();
             NetFlowV9FieldType t = NetFlowV9FieldType.parse(optType);
-            optTemplate.getOptionDefs().add(new NetFlowV9FieldDef(t, optLength));
+            optionDefs.add(NetFlowV9FieldDef.create(t, optLength));
         }
 
         // skip padding
         bb.readerIndex(endOfTemplate);
 
-        return optTemplate;
+        return NetFlowV9OptionTemplate.create(templateId, scopeDefs.build(), optionDefs.build());
     }
 
-    public static List<NetFlowV9Record> parseRecords(ByteBuf bb, NetFlowV9TemplateCache cache) {
-        List<NetFlowV9Record> records = new ArrayList<>();
+    public static List<NetFlowV9BaseRecord> parseRecords(ByteBuf bb, NetFlowV9TemplateCache cache) {
+        List<NetFlowV9BaseRecord> records = new ArrayList<>();
         int flowSetId = bb.readUnsignedShort();
         int length = bb.readUnsignedShort();
         int end = bb.readerIndex() - 4 + length;
 
         List<NetFlowV9FieldDef> defs = null;
 
-        boolean isOptionTemplate = cache.getOptionTemplate() != null && cache.getOptionTemplate().getTemplateId() == flowSetId;
+        boolean isOptionTemplate = cache.getOptionTemplate() != null && cache.getOptionTemplate().templateId() == flowSetId;
         if (isOptionTemplate) {
-            defs = cache.getOptionTemplate().getOptionDefs();
+            defs = cache.getOptionTemplate().optionDefs();
         } else {
             NetFlowV9Template t = cache.getTemplates().get(flowSetId);
-            if (t == null)
-                return null;
-            defs = t.getDefinitions();
+            if (t == null) {
+                return Collections.emptyList();
+            }
+            defs = t.definitions();
         }
 
         // calculate record unit size
         int unitSize = 0;
-        for (NetFlowV9FieldDef def : defs)
-            unitSize += def.getLength();
+        for (NetFlowV9FieldDef def : defs) {
+            unitSize += def.length();
+        }
 
         while (bb.readerIndex() < end && bb.readableBytes() >= unitSize) {
-            NetFlowV9Record r = null;
+            final ImmutableMap.Builder<String, Object> fields = ImmutableMap.builder();
+            for (NetFlowV9FieldDef def : defs) {
+                final String key = def.type().name().toLowerCase();
+                final Optional<Object> optValue = def.parse(bb);
+                optValue.ifPresent(value -> fields.put(key, value));
+            }
 
             if (isOptionTemplate) {
-                NetFlowV9OptionRecord optRecord = new NetFlowV9OptionRecord();
-                for (NetFlowV9ScopeDef def : cache.getOptionTemplate().getScopeDefs()) {
-                    int t = def.getType();
-                    int len = def.getLength();
+                final ImmutableMap.Builder<Integer, Object> scopes = ImmutableMap.builder();
+                for (NetFlowV9ScopeDef def : cache.getOptionTemplate().scopeDefs()) {
+                    int t = def.type();
+                    int len = def.length();
 
                     long l = 0;
                     for (int i = 0; i < len; i++) {
@@ -170,21 +181,13 @@ public class NetFlowV9Parser {
                         l |= bb.readUnsignedByte();
                     }
 
-                    optRecord.getScopes().put(t, l);
+                    scopes.put(t, l);
                 }
 
-                r = optRecord;
-            } else
-                r = new NetFlowV9Record();
-
-            Map<String, Object> fields = r.getFields();
-            for (NetFlowV9FieldDef def : defs) {
-                Object value = def.parse(bb);
-                String key = def.getType().name().toLowerCase();
-                fields.put(key, value);
+                records.add(NetFlowV9OptionRecord.create(fields.build(), scopes.build()));
+            } else {
+                records.add(NetFlowV9Record.create(fields.build()));
             }
-
-            records.add(r);
         }
 
         bb.readerIndex(end);

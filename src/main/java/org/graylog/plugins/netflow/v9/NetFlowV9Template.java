@@ -15,45 +15,23 @@
  */
 package org.graylog.plugins.netflow.v9;
 
-import java.util.ArrayList;
+import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
+
 import java.util.List;
 
-/**
- * @since 0.1.0
- * @author xeraph
- */
-public class NetFlowV9Template {
-	private int templateId;
-	private int fieldCount;
-	private List<NetFlowV9FieldDef> definitions = new ArrayList<NetFlowV9FieldDef>();
+@AutoValue
+public abstract class NetFlowV9Template {
+    public abstract int templateId();
 
-	public int getTemplateId() {
-		return templateId;
-	}
+    public abstract int fieldCount();
 
-	public void setTemplateId(int templateId) {
-		this.templateId = templateId;
-	}
+    public abstract ImmutableList<NetFlowV9FieldDef> definitions();
 
-	public int getFieldCount() {
-		return fieldCount;
-	}
-
-	public void setFieldCount(int fieldCount) {
-		this.fieldCount = fieldCount;
-	}
-
-	public List<NetFlowV9FieldDef> getDefinitions() {
-		return definitions;
-	}
-
-	public void setDefinitions(List<NetFlowV9FieldDef> definitions) {
-		this.definitions = definitions;
-	}
-
-	@Override
-	public String toString() {
-		return "template " + templateId + ", field count=" + fieldCount + ", definitions=" + definitions;
-	}
+    public static NetFlowV9Template create(int templateId,
+                                           int fieldCount,
+                                           List<NetFlowV9FieldDef> definitions) {
+        return new AutoValue_NetFlowV9Template(templateId, fieldCount, ImmutableList.copyOf(definitions));
+    }
 
 }

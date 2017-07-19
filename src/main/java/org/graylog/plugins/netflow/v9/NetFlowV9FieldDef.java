@@ -15,60 +15,60 @@
  */
 package org.graylog.plugins.netflow.v9;
 
+import com.google.auto.value.AutoValue;
 import io.netty.buffer.ByteBuf;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Optional;
 
-/**
- * @since 0.1.0
- * @author xeraph
- */
-public class NetFlowV9FieldDef {
-    private NetFlowV9FieldType type;
-    private int length;
+@AutoValue
+public abstract class NetFlowV9FieldDef {
+    public abstract NetFlowV9FieldType type();
 
-    public NetFlowV9FieldDef(NetFlowV9FieldType type, int length) {
-        this.type = type;
-        this.length = length;
+    public abstract int length();
+
+    public static NetFlowV9FieldDef create(NetFlowV9FieldType type, int length) {
+        return new AutoValue_NetFlowV9FieldDef(type, length);
     }
 
-    public Object parse(ByteBuf bb) {
-        int len = type.defaultLength;
-        if (length != 0)
-            len = length;
+    public Optional<Object> parse(ByteBuf bb) {
+        int len = type().defaultLength;
+        if (length() != 0) {
+            len = length();
+        }
 
-        switch (type.valueType) {
-            case 1:
-                return parseInt(bb, len);
-            case 2:
-                return parseLong(bb, len);
-            case 3:
+        switch (type().valueType) {
+            case INT:
+                return Optional.of(parseInt(bb, len));
+            case LONG:
+                return Optional.of(parseLong(bb, len));
+            case IPV4:
                 byte[] b = new byte[4];
                 bb.readBytes(b);
                 try {
-                    return InetAddress.getByAddress(b).getHostAddress();
+                    return Optional.of(InetAddress.getByAddress(b).getHostAddress());
                 } catch (UnknownHostException e) {
-                    return null;
+                    return Optional.empty();
                 }
-            case 4:
+            case IPV6:
                 byte[] b2 = new byte[16];
                 bb.readBytes(b2);
                 try {
-                    return InetAddress.getByAddress(b2).getHostAddress();
+                    return Optional.of(InetAddress.getByAddress(b2).getHostAddress());
                 } catch (UnknownHostException e) {
-                    return null;
+                    return Optional.empty();
                 }
-            case 5:
+            case MAC:
                 byte[] b3 = new byte[6];
                 bb.readBytes(b3);
-                return String.format("%02x:%02x:%02x:%02x:%02x:%02x", b3[0], b3[1], b3[2], b3[3], b3[4], b3[5]);
-            case 6:
+                return Optional.of(String.format("%02x:%02x:%02x:%02x:%02x:%02x", b3[0], b3[1], b3[2], b3[3], b3[4], b3[5]));
+            case STRING:
                 byte[] b4 = new byte[len];
                 bb.readBytes(b4);
-                return new String(b4);
+                return Optional.of(new String(b4));
             default:
-                return null;
+                return Optional.empty();
         }
     }
 
@@ -89,26 +89,4 @@ public class NetFlowV9FieldDef {
         }
         return l;
     }
-
-    public NetFlowV9FieldType getType() {
-        return type;
-    }
-
-    public void setType(NetFlowV9FieldType type) {
-        this.type = type;
-    }
-
-    public int getLength() {
-        return length;
-    }
-
-    public void setLength(int length) {
-        this.length = length;
-    }
-
-    @Override
-    public String toString() {
-        return "(" + type.name().toLowerCase() + ", len=" + length + ")";
-    }
-
 }
