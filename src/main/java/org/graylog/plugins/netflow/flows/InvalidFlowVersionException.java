@@ -20,8 +20,4 @@ public class InvalidFlowVersionException extends FlowException {
     public InvalidFlowVersionException(int version) {
         super("Invalid NetFlow version " + version);
     }
-
-    public InvalidFlowVersionException(int version, Throwable cause) {
-        super("Invalid NetFlow version " + version, cause);
-    }
 }
