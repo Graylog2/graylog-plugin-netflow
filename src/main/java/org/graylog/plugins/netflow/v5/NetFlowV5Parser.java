@@ -23,10 +23,10 @@ import org.graylog.plugins.netflow.utils.ByteBufUtils;
 
 import java.net.InetAddress;
 
-import static org.graylog.plugins.netflow.v5.NetFlowV5Header.HEADER_LENGTH;
-import static org.graylog.plugins.netflow.v5.NetFlowV5Record.RECORD_LENGTH;
-
 public class NetFlowV5Parser {
+    private static final int HEADER_LENGTH = 24;
+    private static final int RECORD_LENGTH = 48;
+
     public static NetFlowV5Packet parsePacket(ByteBuf bb) {
         final int readableBytes = bb.readableBytes();
 

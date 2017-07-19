@@ -21,8 +21,6 @@ import java.net.InetAddress;
 
 @AutoValue
 public abstract class NetFlowV5Record {
-    static final int RECORD_LENGTH = 48;
-
     // bytes 0-3
     public abstract InetAddress srcAddr();
 

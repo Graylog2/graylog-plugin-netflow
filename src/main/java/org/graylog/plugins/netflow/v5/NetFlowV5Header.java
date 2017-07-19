@@ -19,8 +19,6 @@ import com.google.auto.value.AutoValue;
 
 @AutoValue
 public abstract class NetFlowV5Header {
-    static final int HEADER_LENGTH = 24;
-
     // bytes 0-1
     public abstract int version();
 
