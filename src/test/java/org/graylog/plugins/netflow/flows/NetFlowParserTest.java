@@ -73,7 +73,6 @@ public class NetFlowParserTest {
         assertThat(message1.getSource()).isEqualTo(source.getAddress().getHostAddress());
         assertThat(message1.getFields())
                 .containsEntry("nf_version", 5)
-                .containsEntry("nf_id", "60b32180-f0fa-11e4-8080-808080808080")
                 .containsEntry("nf_src_address", "10.0.2.2")
                 .containsEntry("nf_src_port", 54435)
                 .containsEntry("nf_dst_address", "10.0.2.15")
@@ -102,7 +101,6 @@ public class NetFlowParserTest {
         assertThat(message2.getTimestamp()).isEqualTo(DateTime.parse("2013-05-21T07:51:49.000Z"));
         assertThat(message2.getSource()).isEqualTo(source.getAddress().getHostAddress());
         assertThat(message2.getFields())
-                .containsEntry("nf_id", "4abe5880-c1eb-11e2-8080-808080808080")
                 .containsEntry("nf_src_address", "192.168.124.1")
                 .containsEntry("nf_src_port", 3072)
                 .containsEntry("nf_dst_address", "239.255.255.250")
@@ -120,7 +118,6 @@ public class NetFlowParserTest {
         assertThat(message3.getTimestamp()).isEqualTo(DateTime.parse("2013-05-21T07:52:43.000Z"));
         assertThat(message3.getSource()).isEqualTo(source.getAddress().getHostAddress());
         assertThat(message3.getFields())
-                .containsEntry("nf_id", "6aee1780-c1eb-11e2-8080-808080808080")
                 .containsEntry("nf_src_address", "192.168.124.20")
                 .containsEntry("nf_src_port", 42444)
                 .containsEntry("nf_dst_address", "121.161.231.32")

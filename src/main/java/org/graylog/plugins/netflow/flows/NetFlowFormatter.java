@@ -3,7 +3,6 @@ package org.graylog.plugins.netflow.flows;
 import com.google.common.collect.ImmutableMap;
 import org.graylog.plugins.netflow.utils.ByteBufUtils;
 import org.graylog.plugins.netflow.utils.Protocol;
-import org.graylog.plugins.netflow.utils.UUIDs;
 import org.graylog.plugins.netflow.v5.NetFlowV5Header;
 import org.graylog.plugins.netflow.v5.NetFlowV5Record;
 import org.graylog.plugins.netflow.v9.NetFlowV9BaseRecord;
@@ -15,11 +14,9 @@ import org.joda.time.DateTimeZone;
 import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
 import java.util.Map;
-import java.util.UUID;
 
 public class NetFlowFormatter {
     private static final String MF_VERSION = "nf_version";
-    private static final String MF_ID = "nf_id";
     private static final String MF_FLOW_PACKET_ID = "nf_flow_packet_id";
     private static final String MF_TOS = "nf_tos";
     private static final String MF_SRC = "nf_src";
@@ -71,10 +68,7 @@ public class NetFlowFormatter {
         final long timestamp = header.unixSecs() * 1000L + (header.unixNsecs() / 1000000L);
         final Message message = new Message(toMessageString(record), source, new DateTime(timestamp, DateTimeZone.UTC));
 
-        final UUID uuid = UUIDs.startOf(timestamp);
-
         message.addField(MF_VERSION, 5);
-        message.addField(MF_ID, uuid.toString());
         message.addField(MF_FLOW_PACKET_ID, header.flowSequence());
         message.addField(MF_TOS, record.tos());
         message.addField(MF_SRC, record.srcAddr().getHostAddress() + ":" + record.srcPort());
@@ -114,7 +108,6 @@ public class NetFlowFormatter {
         final String source = sender == null ? null : sender.getAddress().getHostAddress();
         final long timestamp = header.unixSecs() * 1000L;
         final Message message = new Message(toMessageString(record), source, new DateTime(timestamp, DateTimeZone.UTC));
-        final UUID uuid = UUIDs.startOf(timestamp);
 
         final Map<String, Object> fields = record.fields();
 
@@ -129,7 +122,6 @@ public class NetFlowFormatter {
         final long first = (long) fields.get("first_switched");
         final long last = (long) fields.get("last_switched");
 
-        message.addField(MF_ID, uuid.toString());
         message.addField(MF_FLOW_PACKET_ID, header.sequence());
         message.addField(MF_TOS, fields.get("ip_tos"));
         message.addField(MF_SRC_TOS, fields.get("ip_src_tos"));
