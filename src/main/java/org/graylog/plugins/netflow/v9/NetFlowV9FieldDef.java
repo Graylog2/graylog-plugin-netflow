@@ -35,15 +35,23 @@ public abstract class NetFlowV9FieldDef {
     }
 
     public Optional<Object> parse(ByteBuf bb) {
-        int len = type().defaultLength;
-        if (length() != 0) {
-            len = length();
-        }
-
-        switch (type().valueType) {
-            case INT:
-                return Optional.of(parseInt(bb, len));
-            case LONG:
+        int len = length() != 0 ? length() : type().valueType().getDefaultLength();
+        switch (type().valueType()) {
+            case UINT8:
+                return Optional.of(bb.readUnsignedByte());
+            case INT8:
+                return Optional.of(bb.readByte());
+            case UINT16:
+                return Optional.of(bb.readUnsignedShort());
+            case INT16:
+                return Optional.of(bb.readShort());
+            case UINT32:
+                return Optional.of(bb.readUnsignedInt());
+            case INT32:
+                return Optional.of(bb.readInt());
+            case INT64:
+                return Optional.of(bb.readLong());
+            case VARINT:
                 return Optional.of(parseLong(bb, len));
             case IPV4:
                 byte[] b = new byte[4];
@@ -72,15 +80,6 @@ public abstract class NetFlowV9FieldDef {
             default:
                 return Optional.empty();
         }
-    }
-
-    private int parseInt(ByteBuf bb, int length) {
-        int l = 0;
-        for (int i = 0; i < length; i++) {
-            l <<= 8;
-            l |= bb.readUnsignedByte();
-        }
-        return l;
     }
 
     private long parseLong(ByteBuf bb, int length) {

@@ -15,31 +15,41 @@
  */
 package org.graylog.plugins.netflow.v9;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheBuilderSpec;
 
-/**
- * @since 0.1.0
- * @author xeraph
- */
+import javax.annotation.Nullable;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
+
 public class NetFlowV9TemplateCache {
-	private Map<Integer, NetFlowV9Template> templates = new ConcurrentHashMap<Integer, NetFlowV9Template>();
-	private NetFlowV9OptionTemplate optionTemplate;
+    private final Cache<Integer, NetFlowV9Template> cache;
 
-	public Map<Integer, NetFlowV9Template> getTemplates() {
-		return templates;
-	}
+    public NetFlowV9TemplateCache(long maximumSize,
+                                  Duration expireDuration) {
+        this(CacheBuilder.newBuilder()
+                .maximumSize(maximumSize)
+                .expireAfterAccess(expireDuration.toMillis(), TimeUnit.MILLISECONDS)
+                .build());
+    }
 
-	public void setTemplates(Map<Integer, NetFlowV9Template> templates) {
-		this.templates = templates;
-	}
+    public NetFlowV9TemplateCache(CacheBuilderSpec spec) {
+        this(CacheBuilder.from(spec).build());
+    }
 
-	public NetFlowV9OptionTemplate getOptionTemplate() {
-		return optionTemplate;
-	}
+    private NetFlowV9TemplateCache(Cache<Integer, NetFlowV9Template> cache) {
+        this.cache = requireNonNull(cache, "cache");
+    }
 
-	public void setOptionTemplate(NetFlowV9OptionTemplate optionTemplate) {
-		this.optionTemplate = optionTemplate;
-	}
+    public void put(int id, NetFlowV9Template template) {
+        cache.put(id, template);
+    }
 
+    @Nullable
+    public NetFlowV9Template get(int id) {
+        return cache.getIfPresent(id);
+    }
 }

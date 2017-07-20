@@ -1,6 +1,7 @@
 package org.graylog.plugins.netflow.flows;
 
 import com.google.common.io.Resources;
+import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
 import org.graylog.plugins.netflow.v9.NetFlowV9TemplateCache;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.journal.RawMessage;
@@ -12,14 +13,19 @@ import org.junit.Test;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class NetFlowParserTest {
+    private final NetFlowV9FieldTypeRegistry typeRegistry = new NetFlowV9FieldTypeRegistry();
+    private NetFlowV9TemplateCache templateCache;
+
     @Before
     public void setUp() throws Exception {
+        templateCache = new NetFlowV9TemplateCache(1000L, Duration.ofHours(1L));
     }
 
     @Test
@@ -28,7 +34,7 @@ public class NetFlowParserTest {
         final InetSocketAddress source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
         final RawMessage rawMessage = new RawMessage(b, source);
 
-        final List<Message> messages = NetFlowParser.parse(rawMessage, new NetFlowV9TemplateCache());
+        final List<Message> messages = NetFlowParser.parse(rawMessage, templateCache, typeRegistry);
         assertThat(messages).isNull();
     }
 
@@ -44,7 +50,7 @@ public class NetFlowParserTest {
         };
 
         assertThatExceptionOfType(FlowException.class)
-                .isThrownBy(() -> NetFlowParser.parse(rawMessage, new NetFlowV9TemplateCache()))
+                .isThrownBy(() -> NetFlowParser.parse(rawMessage, templateCache, typeRegistry))
                 .withMessage("Boom!");
     }
 
@@ -54,7 +60,7 @@ public class NetFlowParserTest {
         final InetSocketAddress source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
         final RawMessage rawMessage = new RawMessage(b, source);
 
-        final List<Message> messages = NetFlowParser.parse(rawMessage, new NetFlowV9TemplateCache());
+        final List<Message> messages = NetFlowParser.parse(rawMessage, templateCache, typeRegistry);
         assertThat(messages)
                 .isNotNull()
                 .hasSize(2);
@@ -79,15 +85,15 @@ public class NetFlowParserTest {
 
     @Test
     public void parseSuccessfullyDecodesNetFlowV9() throws Exception {
-        final NetFlowV9TemplateCache templateCache = new NetFlowV9TemplateCache();
+        final NetFlowV9TemplateCache templateCache = new NetFlowV9TemplateCache(1000L, Duration.ofHours(1L));
         final byte[] b1 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-1.dat"));
         final byte[] b2 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-2.dat"));
         final byte[] b3 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-3.dat"));
         final InetSocketAddress source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
 
-        final List<Message> messages1 = NetFlowParser.parse(new RawMessage(b1, source), templateCache);
+        final List<Message> messages1 = NetFlowParser.parse(new RawMessage(b1, source), templateCache, typeRegistry);
         assertThat(messages1).isEmpty();
-        final List<Message> messages2 = NetFlowParser.parse(new RawMessage(b2, source), templateCache);
+        final List<Message> messages2 = NetFlowParser.parse(new RawMessage(b2, source), templateCache, typeRegistry);
         assertThat(messages2).isNotNull().hasSize(1);
 
         final Message message2 = messages2.get(0);
@@ -101,11 +107,11 @@ public class NetFlowParserTest {
                 .containsEntry("nf_src_port", 3072)
                 .containsEntry("nf_dst_address", "239.255.255.250")
                 .containsEntry("nf_dst_port", 1900)
-                .containsEntry("nf_proto", 17)
+                .containsEntry("nf_proto", (short) 17)
                 .containsEntry("nf_proto_name", "UDP");
 
 
-        final List<Message> messages3 = NetFlowParser.parse(new RawMessage(b3, source), templateCache);
+        final List<Message> messages3 = NetFlowParser.parse(new RawMessage(b3, source), templateCache, typeRegistry);
         assertThat(messages3).isNotNull().hasSize(1);
 
         final Message message3 = messages3.get(0);
@@ -119,7 +125,7 @@ public class NetFlowParserTest {
                 .containsEntry("nf_src_port", 42444)
                 .containsEntry("nf_dst_address", "121.161.231.32")
                 .containsEntry("nf_dst_port", 9090)
-                .containsEntry("nf_proto", 17)
+                .containsEntry("nf_proto", (short) 17)
                 .containsEntry("nf_proto_name", "UDP");
     }
 

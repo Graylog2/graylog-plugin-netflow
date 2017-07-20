@@ -20,6 +20,7 @@ package org.graylog.plugins.netflow.flows;
 import io.netty.buffer.Unpooled;
 import org.graylog.plugins.netflow.v5.NetFlowV5Packet;
 import org.graylog.plugins.netflow.v5.NetFlowV5Parser;
+import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
 import org.graylog.plugins.netflow.v9.NetFlowV9Packet;
 import org.graylog.plugins.netflow.v9.NetFlowV9Parser;
 import org.graylog.plugins.netflow.v9.NetFlowV9Record;
@@ -39,7 +40,7 @@ public class NetFlowParser {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowParser.class);
 
     @Nullable
-    public static List<Message> parse(RawMessage rawMessage, NetFlowV9TemplateCache templateCache) throws FlowException {
+    public static List<Message> parse(RawMessage rawMessage, NetFlowV9TemplateCache templateCache, NetFlowV9FieldTypeRegistry typeRegistry) throws FlowException {
         final ResolvableInetSocketAddress remoteAddress = rawMessage.getRemoteAddress();
         final InetSocketAddress sender = remoteAddress != null ? remoteAddress.getInetSocketAddress() : null;
 
@@ -59,7 +60,7 @@ public class NetFlowParser {
                         .map(record ->  NetFlowFormatter.toMessage(netFlowV5Packet.header(), record, sender))
                         .collect(Collectors.toList());
             case 9:
-                final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(payload), templateCache);
+                final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(payload), templateCache, typeRegistry);
                 return netFlowV9Packet.records().stream()
                         .filter(record -> record instanceof NetFlowV9Record)
                     .map(record ->  NetFlowFormatter.toMessage(netFlowV9Packet.header(), record, sender))

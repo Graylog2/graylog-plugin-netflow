@@ -20,6 +20,7 @@ package org.graylog.plugins.netflow.codecs;
 import com.google.inject.assistedinject.Assisted;
 import org.graylog.plugins.netflow.flows.FlowException;
 import org.graylog.plugins.netflow.flows.NetFlowParser;
+import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
 import org.graylog.plugins.netflow.v9.NetFlowV9TemplateCache;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.configuration.Configuration;
@@ -37,12 +38,14 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import java.time.Duration;
 import java.util.Collection;
 
 @Codec(name = "netflow", displayName = "NetFlow")
 public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowCodec.class);
-    private NetFlowV9TemplateCache templateCache = new NetFlowV9TemplateCache();
+    private NetFlowV9TemplateCache templateCache = new NetFlowV9TemplateCache(1000L, Duration.ofHours(1L));
+    private NetFlowV9FieldTypeRegistry typeRegistry = new NetFlowV9FieldTypeRegistry();
 
     @Inject
     protected NetFlowCodec(@Assisted Configuration configuration) {
@@ -59,7 +62,7 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     @Override
     public Collection<Message> decodeMessages(@Nonnull RawMessage rawMessage) {
         try {
-            return NetFlowParser.parse(rawMessage, templateCache);
+            return NetFlowParser.parse(rawMessage, templateCache, typeRegistry);
         } catch (FlowException e) {
             LOG.error("Error parsing NetFlow packet", e);
             return null;

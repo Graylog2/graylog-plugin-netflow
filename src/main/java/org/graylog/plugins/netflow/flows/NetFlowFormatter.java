@@ -56,7 +56,7 @@ public class NetFlowFormatter {
         final String dstAddr = (String) fields.get("ipv4_dst_addr");
         final int srcPort = (int) fields.get("l4_src_port");
         final int dstPort = (int) fields.get("l4_dst_port");
-        final int protocol = (int) fields.get("protocol");
+        final short protocol = (short) fields.get("protocol");
 
         return String.format("NetFlowV9 [%s]:%d <> [%s]:%d proto:%d pkts:%d bytes:%d",
                 srcAddr, srcPort,
@@ -146,7 +146,7 @@ public class NetFlowFormatter {
         message.addField(MF_SRC_MASK, fields.get("src_mask"));
         message.addField(MF_DST_MASK, fields.get("dst_mask"));
         message.addField(MF_PROTO, fields.get("protocol"));
-        final Protocol protocolInfo = Protocol.getByNumber((int) fields.get("protocol"));
+        final Protocol protocolInfo = Protocol.getByNumber((short) fields.get("protocol"));
         if (protocolInfo != null) {
             message.addField(MF_PROTO_NAME, protocolInfo.getAlias());
         }

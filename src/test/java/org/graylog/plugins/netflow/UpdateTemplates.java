@@ -3,6 +3,7 @@ package org.graylog.plugins.netflow;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.graylog.plugins.netflow.v9.NetFlowV9FieldType;
 
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
@@ -44,11 +45,11 @@ public class UpdateTemplates {
                 }
 
                 final JsonNode typeNode = value.get(0);
-                final int length;
+                final NetFlowV9FieldType.ValueType type;
                 if (typeNode.isTextual()) {
-                    length = typeToByteLength(typeNode.asText());
+                    type = symbolToValueType(typeNode.asText());
                 } else if (typeNode.isInt()) {
-                    length = typeNode.asInt();
+                    type = intToValueType(typeNode.asInt());
                 } else {
                     System.err.println("Skipping invalid record type: " + field);
                     continue;
@@ -64,10 +65,10 @@ public class UpdateTemplates {
                 final String name = rubySymbolToString(symbol);
                 final String id = field.getKey();
 
-                writer.write(id + "," + name + "," + length + "\n");
+                writer.write(id + "," + name + "," + type.name() + "\n");
 
                 if (verbose) {
-                    System.out.println(id + "," + name + "," + length);
+                    System.out.println(id + "," + name + "," + type);
                 }
             }
         }
@@ -81,27 +82,55 @@ public class UpdateTemplates {
         }
     }
 
-    private static int typeToByteLength(String type) {
+    private static NetFlowV9FieldType.ValueType symbolToValueType(String type) {
         switch (type) {
             case ":uint8":
-                return 1;
+                return NetFlowV9FieldType.ValueType.UINT8;
             case ":uint16":
-                return 2;
+                return NetFlowV9FieldType.ValueType.UINT16;
             case ":uint32":
-                return 4;
+                return NetFlowV9FieldType.ValueType.UINT32;
             case ":uint64":
-                return 8;
+                return NetFlowV9FieldType.ValueType.INT64;
             case ":ip4_addr":
-                return 4;
+                return NetFlowV9FieldType.ValueType.IPV4;
             case ":ip6_addr":
-                return 16;
+                return NetFlowV9FieldType.ValueType.IPV6;
             case ":mac_addr":
-                return 6;
+                return NetFlowV9FieldType.ValueType.MAC;
             case ":string":
-                return 0;
+                return NetFlowV9FieldType.ValueType.STRING;
+            // HACK: http://www.cisco.com/en/US/technologies/tk648/tk362/technologies_white_paper09186a00800a3db9.html#wp9000935
+            case ":forwarding_status":
+                return NetFlowV9FieldType.ValueType.INT8;
+            // HACK: http://www.cisco.com/en/US/technologies/tk648/tk362/technologies_white_paper09186a00800a3db9.html#wp9000991
+            case ":application_id":
+                return NetFlowV9FieldType.ValueType.VARINT;
+            // HACK: http://www.cisco.com/c/en/us/td/docs/security/asa/special/netflow/guide/asa_netflow.html#pgfId-1331620
+            case ":acl_id_asa":
+                return NetFlowV9FieldType.ValueType.VARINT;
+            // HACK: https://www.iana.org/assignments/ipfix/ipfix.xml
+            case "mpls_label_stack_octets":
+                return NetFlowV9FieldType.ValueType.UINT32;
             default:
                 System.err.println("Unknown type: " + type);
-                return 0;
+                return NetFlowV9FieldType.ValueType.STRING;
+        }
+    }
+
+    private static NetFlowV9FieldType.ValueType intToValueType(int length) {
+        switch (length) {
+            case 1:
+                return NetFlowV9FieldType.ValueType.UINT8;
+            case 2:
+                return NetFlowV9FieldType.ValueType.UINT16;
+            case 4:
+                return NetFlowV9FieldType.ValueType.UINT32;
+            case 8:
+                return NetFlowV9FieldType.ValueType.INT64;
+            default:
+                System.err.println("Unknown type length: " + length);
+                return NetFlowV9FieldType.ValueType.STRING;
         }
     }
 }

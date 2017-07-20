@@ -24,10 +24,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 public class NetFlowV9Parser {
-    public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9TemplateCache cache) {
+    private static AtomicReference<NetFlowV9OptionTemplate> optionTemplateReference = new AtomicReference<>();
+
+    public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9TemplateCache cache, NetFlowV9FieldTypeRegistry typeRegistry) {
         final int dataLength = bb.readableBytes();
         final NetFlowV9Header header = parseHeader(bb);
 
@@ -38,13 +41,13 @@ public class NetFlowV9Parser {
             bb.markReaderIndex();
             int flowSetId = bb.readUnsignedShort();
             if (flowSetId == 0) {
-                templates = parseTemplates(bb);
+                templates = parseTemplates(bb, typeRegistry);
                 for (NetFlowV9Template t : templates) {
-                    cache.getTemplates().put(t.templateId(), t);
+                    cache.put(t.templateId(), t);
                 }
             } else if (flowSetId == 1) {
-                optTemplate = parseOptionTemplate(bb);
-                cache.setOptionTemplate(optTemplate);
+                optTemplate = parseOptionTemplate(bb, typeRegistry);
+                optionTemplateReference.set(optTemplate);
             } else {
                 bb.resetReaderIndex();
                 records = parseRecords(bb, cache);
@@ -101,7 +104,7 @@ public class NetFlowV9Parser {
      * | field_length | This number gives the length of the above-defined field, in bytes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
      * </pre>
      */
-    public static List<NetFlowV9Template> parseTemplates(ByteBuf bb) {
+    public static List<NetFlowV9Template> parseTemplates(ByteBuf bb, NetFlowV9FieldTypeRegistry typeRegistry) {
         final ImmutableList.Builder<NetFlowV9Template> templates = ImmutableList.builder();
         int len = bb.readUnsignedShort();
 
@@ -113,7 +116,7 @@ public class NetFlowV9Parser {
             for (int i = 0; i < fieldCount; i++) {
                 int fieldType = bb.readUnsignedShort();
                 int fieldLength = bb.readUnsignedShort();
-                final NetFlowV9FieldType type = NetFlowV9FieldType.parse(fieldType);
+                final NetFlowV9FieldType type = typeRegistry.get(fieldType);
                 final NetFlowV9FieldDef fieldDef = NetFlowV9FieldDef.create(type, fieldLength);
                 fieldDefs.add(fieldDef);
             }
@@ -152,7 +155,7 @@ public class NetFlowV9Parser {
      * | padding               | Padding should be inserted to align the end of the FlowSet on a 32 bit boundary. Pay attention that the length field will include those padding bits.                                                                                                                                                                                                                                                                                                                                          |
      * </pre>
      */
-    public static NetFlowV9OptionTemplate parseOptionTemplate(ByteBuf bb) {
+    public static NetFlowV9OptionTemplate parseOptionTemplate(ByteBuf bb, NetFlowV9FieldTypeRegistry typeRegistry) {
         int length = bb.readUnsignedShort();
         final int templateId = bb.readUnsignedShort();
 
@@ -178,7 +181,7 @@ public class NetFlowV9Parser {
         while (bb.readerIndex() < endOfOption) {
             int optType = bb.readUnsignedShort();
             int optLength = bb.readUnsignedShort();
-            NetFlowV9FieldType t = NetFlowV9FieldType.parse(optType);
+            NetFlowV9FieldType t = typeRegistry.get(optType);
             optionDefs.add(NetFlowV9FieldDef.create(t, optLength));
         }
 
@@ -208,11 +211,12 @@ public class NetFlowV9Parser {
 
         List<NetFlowV9FieldDef> defs = null;
 
-        boolean isOptionTemplate = cache.getOptionTemplate() != null && cache.getOptionTemplate().templateId() == flowSetId;
+        final NetFlowV9OptionTemplate optionTemplate = optionTemplateReference.get();
+        boolean isOptionTemplate = optionTemplate != null && optionTemplate.templateId() == flowSetId;
         if (isOptionTemplate) {
-            defs = cache.getOptionTemplate().optionDefs();
+            defs = optionTemplate.optionDefs();
         } else {
-            NetFlowV9Template t = cache.getTemplates().get(flowSetId);
+            NetFlowV9Template t = cache.get(flowSetId);
             if (t == null) {
                 return Collections.emptyList();
             }
@@ -235,7 +239,7 @@ public class NetFlowV9Parser {
 
             if (isOptionTemplate) {
                 final ImmutableMap.Builder<Integer, Object> scopes = ImmutableMap.builder();
-                for (NetFlowV9ScopeDef def : cache.getOptionTemplate().scopeDefs()) {
+                for (NetFlowV9ScopeDef def : optionTemplate.scopeDefs()) {
                     int t = def.type();
                     int len = def.length();
 
