@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 
+// TODO: Persist templates to file over restarts
 public class NetFlowV9TemplateCache {
     private final Cache<Integer, NetFlowV9Template> cache;
 

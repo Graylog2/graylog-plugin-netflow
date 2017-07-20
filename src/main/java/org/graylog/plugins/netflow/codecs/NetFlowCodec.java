@@ -44,12 +44,13 @@ import java.util.Collection;
 @Codec(name = "netflow", displayName = "NetFlow")
 public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowCodec.class);
-    private NetFlowV9TemplateCache templateCache = new NetFlowV9TemplateCache(1000L, Duration.ofHours(1L));
-    private NetFlowV9FieldTypeRegistry typeRegistry = new NetFlowV9FieldTypeRegistry();
+    private final NetFlowV9TemplateCache templateCache = new NetFlowV9TemplateCache(1000L, Duration.ofHours(1L));
+    private final NetFlowV9FieldTypeRegistry typeRegistry = new NetFlowV9FieldTypeRegistry();
 
     @Inject
     protected NetFlowCodec(@Assisted Configuration configuration) {
         super(configuration);
+        // TODO: Initialize NetFlowV9TemplateCache with custom settings
     }
 
     @Nullable
