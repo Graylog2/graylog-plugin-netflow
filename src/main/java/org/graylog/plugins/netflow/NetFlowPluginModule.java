@@ -6,7 +6,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *         http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,6 @@
 package org.graylog.plugins.netflow;
 
 import org.graylog.plugins.netflow.codecs.NetFlowCodec;
-import org.graylog.plugins.netflow.codecs.TemplateStore;
 import org.graylog.plugins.netflow.inputs.NetFlowUdpInput;
 import org.graylog2.plugin.PluginConfigBean;
 import org.graylog2.plugin.PluginModule;
@@ -28,23 +27,7 @@ import org.graylog2.plugin.PluginModule;
 import java.util.Collections;
 import java.util.Set;
 
-/**
- * Extend the PluginModule abstract class here to add you plugin to the system.
- */
 public class NetFlowPluginModule extends PluginModule {
-    /**
-     * Returns all configuration beans required by this plugin.
-     *
-     * Implementing this method is optional. The default method returns an empty {@link Set}.
-     */
-    public static TemplateStore v9templates = new TemplateStore();
-
-    //v9 support ; initialized singleton object to hold mappings of
-    //fields
-    public static TemplateStore getTemplateStore() {
-        return v9templates;
-    }
-
     @Override
     public Set<? extends PluginConfigBean> getConfigBeans() {
         return Collections.emptySet();
@@ -52,7 +35,6 @@ public class NetFlowPluginModule extends PluginModule {
 
     @Override
     protected void configure() {
-        //Class<? extends Codec> net = NetFlowCodec.class;
         addMessageInput(NetFlowUdpInput.class);
         addCodec("netflow", NetFlowCodec.class);
     }
