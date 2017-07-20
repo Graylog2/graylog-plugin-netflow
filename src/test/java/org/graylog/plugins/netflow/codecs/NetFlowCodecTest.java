@@ -7,9 +7,7 @@ import org.graylog2.plugin.Message;
 import org.graylog2.plugin.configuration.Configuration;
 import org.graylog2.plugin.journal.RawMessage;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetAddress;
@@ -69,12 +67,12 @@ public class NetFlowCodecTest {
         final Collection<Message> messages = codec.decodeMessages(rawMessage);
         assertThat(messages)
                 .isNotNull()
-                .isNotEmpty();
-        final Message message = Iterables.getFirst(messages, null);
+                .hasSize(2);
+        final Message message = Iterables.get(messages, 0);
         assertThat(message).isNotNull();
 
         assertThat(message.getMessage()).isEqualTo("NetFlowV5 [10.0.2.2]:54435 <> [10.0.2.15]:22 proto:6 pkts:5 bytes:230");
-        assertThat(message.getTimestamp()).isEqualTo(new DateTime(2015, 5, 2, 18, 38, 8, DateTimeZone.UTC));
+        assertThat(message.getTimestamp()).isEqualTo(DateTime.parse("2015-05-02T18:38:08.280Z"));
         assertThat(message.getSource()).isEqualTo(source.getAddress().getHostAddress());
         assertThat(message.getFields())
                 .containsEntry("nf_src_address", "10.0.2.2")
@@ -84,17 +82,39 @@ public class NetFlowCodecTest {
 
     @Test
     public void decodeMessagesSuccessfullyDecodesNetFlowV9() throws Exception {
-        final byte[] b = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-1.dat"));
+        final byte[] b1 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-1.dat"));
+        final byte[] b2 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-2.dat"));
+        final byte[] b3 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-3.dat"));
         final InetSocketAddress source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
-        final RawMessage rawMessage = new RawMessage(b, source);
 
-        final Collection<Message> messages = codec.decodeMessages(rawMessage);
-        assertThat(messages)
+        final Collection<Message> messages1 = codec.decodeMessages(new RawMessage(b1, source));
+        assertThat(messages1).isEmpty();
+        final Collection<Message> messages2 = codec.decodeMessages(new RawMessage(b2, source));
+        assertThat(messages2)
                 .isNotNull()
-                .isNotEmpty();
-        final Message message = Iterables.getFirst(messages, null);
-        assertThat(message).isNotNull();
+                .hasSize(1);
+        final Message message2 = Iterables.getFirst(messages2, null);
+        assertThat(message2).isNotNull();
+        assertThat(message2.getMessage()).isEqualTo("NetFlowV9 [192.168.124.1]:3072 <> [239.255.255.250]:1900 proto:17 pkts:8 bytes:2818");
+        assertThat(message2.getTimestamp()).isEqualTo(DateTime.parse("2013-05-21T07:51:49.000Z"));
+        assertThat(message2.getSource()).isEqualTo(source.getAddress().getHostAddress());
+        assertThat(message2.getFields())
+                .containsEntry("nf_src_address", "192.168.124.1")
+                .containsEntry("nf_dst_address", "239.255.255.250")
+                .containsEntry("nf_proto_name", "UDP");
 
-        assertThat(message.getSource()).isEqualTo(source.getAddress().getHostAddress());
+        final Collection<Message> messages3 = codec.decodeMessages(new RawMessage(b3, source));
+        assertThat(messages3)
+                .isNotNull()
+                .hasSize(1);
+        final Message message3 = Iterables.getFirst(messages3, null);
+        assertThat(message3).isNotNull();
+        assertThat(message3.getMessage()).isEqualTo("NetFlowV9 [192.168.124.20]:42444 <> [121.161.231.32]:9090 proto:17 pkts:2 bytes:348");
+        assertThat(message3.getTimestamp()).isEqualTo(DateTime.parse("2013-05-21T07:52:43.000Z"));
+        assertThat(message3.getSource()).isEqualTo(source.getAddress().getHostAddress());
+        assertThat(message3.getFields())
+                .containsEntry("nf_src_address", "192.168.124.20")
+                .containsEntry("nf_dst_address", "121.161.231.32")
+                .containsEntry("nf_proto_name", "UDP");
     }
 }

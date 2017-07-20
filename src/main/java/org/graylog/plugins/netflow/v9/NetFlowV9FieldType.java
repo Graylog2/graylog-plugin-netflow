@@ -110,9 +110,6 @@ public enum NetFlowV9FieldType {
 
     public final ValueType valueType;
 
-    // configured by template
-    public int length;
-
     public final int defaultLength;
 
     NetFlowV9FieldType(int id, ValueType valueType, int defaultLength) {

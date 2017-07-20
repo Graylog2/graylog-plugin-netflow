@@ -18,7 +18,13 @@
 package org.graylog.plugins.netflow.flows;
 
 import io.netty.buffer.Unpooled;
-import org.graylog.plugins.netflow.codecs.TemplateStore;
+import org.graylog.plugins.netflow.v5.NetFlowV5Packet;
+import org.graylog.plugins.netflow.v5.NetFlowV5Parser;
+import org.graylog.plugins.netflow.v9.NetFlowV9Packet;
+import org.graylog.plugins.netflow.v9.NetFlowV9Parser;
+import org.graylog.plugins.netflow.v9.NetFlowV9Record;
+import org.graylog.plugins.netflow.v9.NetFlowV9TemplateCache;
+import org.graylog2.plugin.Message;
 import org.graylog2.plugin.ResolvableInetSocketAddress;
 import org.graylog2.plugin.journal.RawMessage;
 import org.slf4j.Logger;
@@ -27,12 +33,13 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class NetFlowParser {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowParser.class);
 
     @Nullable
-    public static NetFlowPacket parse(RawMessage rawMessage, TemplateStore v9templates) throws FlowException {
+    public static List<Message> parse(RawMessage rawMessage, NetFlowV9TemplateCache templateCache) throws FlowException {
         final ResolvableInetSocketAddress remoteAddress = rawMessage.getRemoteAddress();
         final InetSocketAddress sender = remoteAddress != null ? remoteAddress.getInetSocketAddress() : null;
 
@@ -46,9 +53,17 @@ public class NetFlowParser {
         final int netFlowVersion = (payload[0] << 8) + payload[1];
         switch (netFlowVersion) {
             case 5:
-                return NetFlowV5Packet.parse(sender, Unpooled.wrappedBuffer(payload));
+                final NetFlowV5Packet netFlowV5Packet = NetFlowV5Parser.parsePacket(Unpooled.wrappedBuffer(payload));
+
+                return netFlowV5Packet.records().stream()
+                        .map(record ->  NetFlowFormatter.toMessage(netFlowV5Packet.header(), record, sender))
+                        .collect(Collectors.toList());
             case 9:
-                return NetFlowV9Packet.parse(sender, Unpooled.wrappedBuffer(payload), v9templates);
+                final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(payload), templateCache);
+                return netFlowV9Packet.records().stream()
+                        .filter(record -> record instanceof NetFlowV9Record)
+                    .map(record ->  NetFlowFormatter.toMessage(netFlowV9Packet.header(), record, sender))
+                    .collect(Collectors.toList());
             default:
                 final List<RawMessage.SourceNode> sourceNodes = rawMessage.getSourceNodes();
                 final RawMessage.SourceNode sourceNode = sourceNodes.isEmpty() ? null : sourceNodes.get(sourceNodes.size() - 1);

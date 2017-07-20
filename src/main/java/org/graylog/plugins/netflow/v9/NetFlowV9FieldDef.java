@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBuf;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Optional;
 
 @AutoValue
@@ -62,11 +64,11 @@ public abstract class NetFlowV9FieldDef {
             case MAC:
                 byte[] b3 = new byte[6];
                 bb.readBytes(b3);
-                return Optional.of(String.format("%02x:%02x:%02x:%02x:%02x:%02x", b3[0], b3[1], b3[2], b3[3], b3[4], b3[5]));
+                return Optional.of(String.format(Locale.ROOT, "%02x:%02x:%02x:%02x:%02x:%02x", b3[0], b3[1], b3[2], b3[3], b3[4], b3[5]));
             case STRING:
                 byte[] b4 = new byte[len];
                 bb.readBytes(b4);
-                return Optional.of(new String(b4));
+                return Optional.of(new String(b4, StandardCharsets.UTF_8));
             default:
                 return Optional.empty();
         }

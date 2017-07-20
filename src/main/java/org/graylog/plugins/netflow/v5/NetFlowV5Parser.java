@@ -61,7 +61,7 @@ public class NetFlowV5Parser {
      * | 22-23 | sampling_interval | First two bits hold the sampling mode; remaining 14 bits hold value of sampling interval |
      * </pre>
      */
-    public static NetFlowV5Header parseHeader(ByteBuf bb) {
+    private static NetFlowV5Header parseHeader(ByteBuf bb) {
         final int version = bb.readUnsignedShort();
         if (version != 5) {
             throw new InvalidFlowVersionException(version);
@@ -117,7 +117,7 @@ public class NetFlowV5Parser {
      * | 46-47 | pad2      | Unused (zero) bytes                                                |
      * </pre>
      */
-    public static NetFlowV5Record parseRecord(ByteBuf bb) {
+    private static NetFlowV5Record parseRecord(ByteBuf bb) {
         final InetAddress srcAddr = ByteBufUtils.readInetAddress(bb);
         final InetAddress dstAddr = ByteBufUtils.readInetAddress(bb);
         final InetAddress nextHop = ByteBufUtils.readInetAddress(bb);

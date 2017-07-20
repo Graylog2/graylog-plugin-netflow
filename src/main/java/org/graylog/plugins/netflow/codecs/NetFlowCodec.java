@@ -17,13 +17,10 @@
 
 package org.graylog.plugins.netflow.codecs;
 
-import com.google.common.collect.Lists;
 import com.google.inject.assistedinject.Assisted;
-import org.graylog.plugins.netflow.NetFlowPluginModule;
 import org.graylog.plugins.netflow.flows.FlowException;
-import org.graylog.plugins.netflow.flows.NetFlow;
-import org.graylog.plugins.netflow.flows.NetFlowPacket;
 import org.graylog.plugins.netflow.flows.NetFlowParser;
+import org.graylog.plugins.netflow.v9.NetFlowV9TemplateCache;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.configuration.Configuration;
 import org.graylog2.plugin.configuration.ConfigurationRequest;
@@ -41,14 +38,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.util.Collection;
-import java.util.List;
 
 @Codec(name = "netflow", displayName = "NetFlow")
 public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
-
-    public TemplateStore v9templates = NetFlowPluginModule.getTemplateStore();
-
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowCodec.class);
+    private NetFlowV9TemplateCache templateCache = new NetFlowV9TemplateCache();
 
     @Inject
     protected NetFlowCodec(@Assisted Configuration configuration) {
@@ -65,18 +59,7 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     @Override
     public Collection<Message> decodeMessages(@Nonnull RawMessage rawMessage) {
         try {
-            final NetFlowPacket packet = NetFlowParser.parse(rawMessage, v9templates);
-
-            if (packet == null) {
-                return null;
-            }
-
-            final List<Message> messages = Lists.newArrayListWithCapacity(packet.getFlows().size());
-            for (NetFlow flow : packet.getFlows()) {
-                messages.add(flow.toMessage());
-            }
-
-            return messages;
+            return NetFlowParser.parse(rawMessage, templateCache);
         } catch (FlowException e) {
             LOG.error("Error parsing NetFlow packet", e);
             return null;
