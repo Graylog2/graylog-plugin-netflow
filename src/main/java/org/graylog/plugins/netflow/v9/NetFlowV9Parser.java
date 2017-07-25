@@ -43,7 +43,7 @@ public class NetFlowV9Parser {
             if (flowSetId == 0) {
                 templates = parseTemplates(bb, typeRegistry);
                 for (NetFlowV9Template t : templates) {
-                    cache.put(t.templateId(), t);
+                    cache.put(t);
                 }
             } else if (flowSetId == 1) {
                 optTemplate = parseOptionTemplate(bb, typeRegistry);

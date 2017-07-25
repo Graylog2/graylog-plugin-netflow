@@ -15,17 +15,27 @@
  */
 package org.graylog.plugins.netflow.v9;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.auto.value.AutoValue;
 
+@JsonAutoDetect
 @AutoValue
 public abstract class NetFlowV9FieldType {
+    @JsonProperty("id")
     public abstract int id();
 
+    @JsonProperty("value_type")
     public abstract ValueType valueType();
 
+    @JsonProperty("name")
     public abstract String name();
 
-    public static NetFlowV9FieldType create(int id, ValueType valueType, String name) {
+    @JsonCreator
+    public static NetFlowV9FieldType create(@JsonProperty("id") int id,
+                                            @JsonProperty("value_type") ValueType valueType,
+                                            @JsonProperty("name") String name) {
         return new AutoValue_NetFlowV9FieldType(id, valueType, name);
     }
 

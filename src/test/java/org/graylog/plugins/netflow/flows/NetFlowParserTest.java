@@ -1,31 +1,44 @@
 package org.graylog.plugins.netflow.flows;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
 import org.graylog.plugins.netflow.v9.NetFlowV9TemplateCache;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.journal.RawMessage;
+import org.graylog2.shared.bindings.providers.ObjectMapperProvider;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class NetFlowParserTest {
+    @Rule
+    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+    private final ObjectMapper objectMapper = new ObjectMapperProvider().get();
     private final NetFlowV9FieldTypeRegistry typeRegistry = new NetFlowV9FieldTypeRegistry();
     private NetFlowV9TemplateCache templateCache;
 
     @Before
     public void setUp() throws Exception {
-        templateCache = new NetFlowV9TemplateCache(1000L, Duration.ofHours(1L));
+        templateCache = new NetFlowV9TemplateCache(
+                1000L,
+                temporaryFolder.newFile().toPath(),
+                30 * 60,
+                Executors.newSingleThreadScheduledExecutor(),
+                objectMapper);
     }
 
     @Test
@@ -84,7 +97,6 @@ public class NetFlowParserTest {
 
     @Test
     public void parseSuccessfullyDecodesNetFlowV9() throws Exception {
-        final NetFlowV9TemplateCache templateCache = new NetFlowV9TemplateCache(1000L, Duration.ofHours(1L));
         final byte[] b1 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-1.dat"));
         final byte[] b2 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-2.dat"));
         final byte[] b3 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-3.dat"));

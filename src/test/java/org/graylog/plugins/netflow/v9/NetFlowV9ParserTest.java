@@ -15,26 +15,40 @@
  */
 package org.graylog.plugins.netflow.v9;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Resources;
 import io.netty.buffer.Unpooled;
+import org.graylog2.shared.bindings.providers.ObjectMapperProvider;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 public class NetFlowV9ParserTest {
+    @Rule
+    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+    private final ObjectMapper objectMapper = new ObjectMapperProvider().get();
+
     @Test
     public void testParse() throws IOException {
         final byte[] b1 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-1.dat"));
         final byte[] b2 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-2.dat"));
         final byte[] b3 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-3.dat"));
 
-        NetFlowV9TemplateCache cache = new NetFlowV9TemplateCache(1000L, Duration.ofHours(1L));
+        NetFlowV9TemplateCache cache = new NetFlowV9TemplateCache(
+                1000L,
+                temporaryFolder.newFile().toPath(),
+                30 * 60,
+                Executors.newSingleThreadScheduledExecutor(),
+                objectMapper);
         NetFlowV9FieldTypeRegistry typeRegistry = new NetFlowV9FieldTypeRegistry();
 
         // check header

@@ -1,5 +1,7 @@
 package org.graylog.plugins.netflow.codecs;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Resources;
 import io.pkts.Pcap;
@@ -9,10 +11,14 @@ import org.graylog.plugins.netflow.flows.FlowException;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.configuration.Configuration;
 import org.graylog2.plugin.journal.RawMessage;
+import org.graylog2.shared.bindings.providers.ObjectMapperProvider;
 import org.joda.time.DateTime;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -20,16 +26,28 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class NetFlowCodecTest {
+    @Rule
+    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+    private final ObjectMapper objectMapper = new ObjectMapperProvider().get();
     private NetFlowCodec codec;
 
     @Before
     public void setUp() throws Exception {
-        codec = new NetFlowCodec(Configuration.EMPTY_CONFIGURATION);
+        final File cacheFile = temporaryFolder.newFile();
+        final ImmutableMap<String, Object> configMap = ImmutableMap.of(
+                NetFlowCodec.CK_CACHE_SIZE, 100,
+                NetFlowCodec.CK_CACHE_SAVE_INTERVAL, 300,
+                NetFlowCodec.CK_CACHE_PATH, cacheFile.getAbsolutePath());
+        final Configuration configuration = new Configuration(configMap);
+
+        codec = new NetFlowCodec(configuration, Executors.newSingleThreadScheduledExecutor(), objectMapper);
     }
 
     @Test
