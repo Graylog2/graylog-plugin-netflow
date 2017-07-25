@@ -117,6 +117,10 @@ public class NetFlowV9Parser {
                 int fieldType = bb.readUnsignedShort();
                 int fieldLength = bb.readUnsignedShort();
                 final NetFlowV9FieldType type = typeRegistry.get(fieldType);
+                if (type == null) {
+                    // Skip unknown/invalid field type
+                    continue;
+                }
                 final NetFlowV9FieldDef fieldDef = NetFlowV9FieldDef.create(type, fieldLength);
                 fieldDefs.add(fieldDef);
             }
