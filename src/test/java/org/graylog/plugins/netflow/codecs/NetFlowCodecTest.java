@@ -83,7 +83,11 @@ public class NetFlowCodecTest {
         assertThat(message.getFields())
                 .containsEntry("nf_src_address", "10.0.2.2")
                 .containsEntry("nf_dst_address", "10.0.2.15")
-                .containsEntry("nf_proto_name", "TCP");
+                .containsEntry("nf_proto_name", "TCP")
+                .containsEntry("nf_src_as", 0)
+                .containsEntry("nf_dst_as", 0)
+                .containsEntry("nf_snmp_input", 0)
+                .containsEntry("nf_snmp_output", 0);
     }
 
     @Test
@@ -107,7 +111,11 @@ public class NetFlowCodecTest {
         assertThat(message2.getFields())
                 .containsEntry("nf_src_address", "192.168.124.1")
                 .containsEntry("nf_dst_address", "239.255.255.250")
-                .containsEntry("nf_proto_name", "UDP");
+                .containsEntry("nf_proto_name", "UDP")
+                .containsEntry("nf_src_as", 0)
+                .containsEntry("nf_dst_as", 0)
+                .containsEntry("nf_snmp_input", 0)
+                .containsEntry("nf_snmp_output", 0);
 
         final Collection<Message> messages3 = codec.decodeMessages(new RawMessage(b3, source));
         assertThat(messages3)
@@ -121,7 +129,11 @@ public class NetFlowCodecTest {
         assertThat(message3.getFields())
                 .containsEntry("nf_src_address", "192.168.124.20")
                 .containsEntry("nf_dst_address", "121.161.231.32")
-                .containsEntry("nf_proto_name", "UDP");
+                .containsEntry("nf_proto_name", "UDP")
+                .containsEntry("nf_src_as", 0)
+                .containsEntry("nf_dst_as", 0)
+                .containsEntry("nf_snmp_input", 0)
+                .containsEntry("nf_snmp_output", 0);
     }
 
     @Test

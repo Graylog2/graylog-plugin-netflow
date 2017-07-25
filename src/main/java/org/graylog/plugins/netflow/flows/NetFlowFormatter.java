@@ -30,6 +30,8 @@ public class NetFlowFormatter {
     private static final String MF_DST_PORT = "nf_dst_port";
     private static final String MF_SRC_MASK = "nf_src_mask";
     private static final String MF_DST_MASK = "nf_dst_mask";
+    private static final String MF_SRC_AS = "nf_src_as";
+    private static final String MF_DST_AS = "nf_dst_as";
     private static final String MF_PROTO = "nf_proto";
     private static final String MF_PROTO_NAME = "nf_proto_name";
     private static final String MF_TCP_FLAGS = "nf_tcp_flags";
@@ -37,6 +39,8 @@ public class NetFlowFormatter {
     private static final String MF_STOP = "nf_stop";
     private static final String MF_BYTES = "nf_bytes";
     private static final String MF_PKTS = "nf_pkts";
+    private static final String MF_SNMP_INPUT = "nf_snmp_input";
+    private static final String MF_SNMP_OUTPUT = "nf_snmp_output";
 
     private static String toMessageString(NetFlowV5Record record) {
         return String.format("NetFlowV5 [%s]:%d <> [%s]:%d proto:%d pkts:%d bytes:%d",
@@ -82,6 +86,9 @@ public class NetFlowFormatter {
         message.addField(MF_DST_PORT, record.dstPort());
         message.addField(MF_SRC_MASK, record.srcMask());
         message.addField(MF_DST_MASK, record.dstMask());
+        message.addField(MF_SRC_AS, record.srcAs());
+        message.addField(MF_DST_AS, record.dstAs());
+
         message.addField(MF_PROTO, record.protocol());
         final Protocol protocol = Protocol.getByNumber(record.protocol());
         if (protocol != null) {
@@ -98,6 +105,8 @@ public class NetFlowFormatter {
         }
         message.addField(MF_BYTES, record.octetCount());
         message.addField(MF_PKTS, record.packetCount());
+        message.addField(MF_SNMP_INPUT, record.inputIface());
+        message.addField(MF_SNMP_OUTPUT, record.outputIface());
 
         return message;
     }
@@ -137,6 +146,8 @@ public class NetFlowFormatter {
         message.addField(MF_DST_PORT, dstPort);
         message.addField(MF_SRC_MASK, fields.get("src_mask"));
         message.addField(MF_DST_MASK, fields.get("dst_mask"));
+        message.addField(MF_SRC_AS, fields.get("src_as"));
+        message.addField(MF_DST_AS, fields.get("dst_as"));
         message.addField(MF_PROTO, fields.get("protocol"));
         final Protocol protocolInfo = Protocol.getByNumber((short) fields.get("protocol"));
         if (protocolInfo != null) {
@@ -154,6 +165,8 @@ public class NetFlowFormatter {
         }
         message.addField(MF_BYTES, fields.get("in_bytes"));
         message.addField(MF_PKTS, fields.get("in_pkts"));
+        message.addField(MF_SNMP_INPUT, fields.get("input_snmp"));
+        message.addField(MF_SNMP_OUTPUT, fields.get("output_snmp"));
 
         return message;
     }
