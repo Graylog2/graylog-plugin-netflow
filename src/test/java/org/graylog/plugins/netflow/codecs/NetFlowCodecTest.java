@@ -2,6 +2,9 @@ package org.graylog.plugins.netflow.codecs;
 
 import com.google.common.collect.Iterables;
 import com.google.common.io.Resources;
+import io.pkts.Pcap;
+import io.pkts.packet.UDPPacket;
+import io.pkts.protocol.Protocol;
 import org.graylog.plugins.netflow.flows.FlowException;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.configuration.Configuration;
@@ -10,10 +13,13 @@ import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -116,5 +122,49 @@ public class NetFlowCodecTest {
                 .containsEntry("nf_src_address", "192.168.124.20")
                 .containsEntry("nf_dst_address", "121.161.231.32")
                 .containsEntry("nf_proto_name", "UDP");
+    }
+
+    @Test
+    public void pcapNetFlowV5() throws Exception {
+        final List<Message> allMessages = new ArrayList<>();
+        try (InputStream inputStream = Resources.getResource("netflow-data/netflow5.pcap").openStream()) {
+            final Pcap pcap = Pcap.openStream(inputStream);
+            pcap.loop(packet -> {
+                        if (packet.hasProtocol(Protocol.UDP)) {
+                            final UDPPacket udp = (UDPPacket) packet.getPacket(Protocol.UDP);
+                            final InetSocketAddress source = new InetSocketAddress(udp.getSourceIP(), udp.getSourcePort());
+                            final Collection<Message> messages = codec.decodeMessages(new RawMessage(udp.getPayload().getArray(), source));
+                            assertThat(messages)
+                                    .isNotNull()
+                                    .isNotEmpty();
+                            allMessages.addAll(messages);
+                        }
+                        return true;
+                    }
+            );
+            assertThat(allMessages).hasSize(4);
+        }
+    }
+
+    @Test
+    public void pcapNetFlowV9() throws Exception {
+        final List<Message> allMessages = new ArrayList<>();
+        try (InputStream inputStream = Resources.getResource("netflow-data/netflow9.pcap").openStream()) {
+            final Pcap pcap = Pcap.openStream(inputStream);
+            pcap.loop(packet -> {
+                        if (packet.hasProtocol(Protocol.UDP)) {
+                            final UDPPacket udp = (UDPPacket) packet.getPacket(Protocol.UDP);
+                            final InetSocketAddress source = new InetSocketAddress(udp.getSourceIP(), udp.getSourcePort());
+                            final Collection<Message> messages = codec.decodeMessages(new RawMessage(udp.getPayload().getArray(), source));
+                            assertThat(messages)
+                                    .isNotNull()
+                                    .isNotEmpty();
+                            allMessages.addAll(messages);
+                        }
+                        return true;
+                    }
+            );
+        }
+        assertThat(allMessages).hasSize(19);
     }
 }
