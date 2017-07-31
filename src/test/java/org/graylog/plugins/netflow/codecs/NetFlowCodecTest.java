@@ -32,7 +32,6 @@ import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 public class NetFlowCodecTest {
     @Rule
@@ -112,7 +111,7 @@ public class NetFlowCodecTest {
                 NetFlowCodec.CK_NETFLOW9_DEFINITION_PATH, definitionsFile.getAbsolutePath());
         final Configuration configuration = new Configuration(configMap);
 
-        assertThatIllegalArgumentException()
+        assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> new NetFlowCodec(configuration, Executors.newSingleThreadScheduledExecutor(), objectMapper))
                 .withMessageMatching("Unable to parse NetFlow 9 definitions");
     }
