@@ -19,10 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.netty.buffer.ByteBuf;
 import org.graylog.plugins.netflow.flows.EmptyTemplateException;
-import org.graylog.plugins.netflow.flows.FlowException;
 import org.graylog.plugins.netflow.flows.InvalidFlowVersionException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 
 public class NetFlowV9Parser {
-    private static final Logger LOG = LoggerFactory.getLogger(NetFlowV9Parser.class);
     private static final AtomicReference<NetFlowV9OptionTemplate> optionTemplateReference = new AtomicReference<>();
 
     public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9TemplateCache cache, NetFlowV9FieldTypeRegistry typeRegistry) {
