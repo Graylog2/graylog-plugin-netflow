@@ -222,6 +222,14 @@ public class NetFlowCodecTest {
     }
 
     @Test
+    public void decodeMessagesThrowsEmptyTemplateExceptionWithIncompleteNetFlowV9() throws Exception {
+        final byte[] b = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-3_incomplete.dat"));
+        final InetSocketAddress source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
+
+        assertThat(codec.decodeMessages(new RawMessage(b, source))).isNull();
+    }
+
+    @Test
     public void pcap_softflowd_NetFlowV5() throws Exception {
         final List<Message> allMessages = new ArrayList<>();
         try (InputStream inputStream = Resources.getResource("netflow-data/netflow5.pcap").openStream()) {
