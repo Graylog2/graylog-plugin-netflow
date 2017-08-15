@@ -14,6 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
+ * Copyright 2017 Graylog Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.graylog.plugins.netflow.codecs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +49,7 @@ import org.graylog2.plugin.inputs.annotations.Codec;
 import org.graylog2.plugin.inputs.annotations.ConfigClass;
 import org.graylog2.plugin.inputs.annotations.FactoryClass;
 import org.graylog2.plugin.inputs.codecs.AbstractCodec;
+import org.graylog2.plugin.inputs.codecs.CodecAggregator;
 import org.graylog2.plugin.inputs.codecs.MultiMessageCodec;
 import org.graylog2.plugin.inputs.transports.NettyTransport;
 import org.graylog2.plugin.journal.RawMessage;
@@ -68,6 +84,15 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     private static final int DEFAULT_CACHE_SIZE = 1000;
     private static final String DEFAULT_CACHE_PATH = SystemUtils.getJavaIoTmpDir().toPath().resolve("netflow-templates.json").toString();
     private static final int DEFAULT_CACHE_SAVE_INTERVAL = 15 * 60;
+    /**
+     * Marker byte which signals that the contained netflow packet should be parsed as is.
+     */
+    public static final byte PASSTHROUGH_MARKER = 0x00;
+    /**
+     * Marker byte which signals that the contained netflow v9 packet is non-RFC:
+     * It contains all necessary template flows before any data flows and can be completely parsed without a template cache.
+     */
+    public static final byte ORDERED_V9_MARKER = 0x01;
 
     private final NetFlowV9TemplateCache templateCache;
     private final NetFlowV9FieldTypeRegistry typeRegistry;
@@ -92,6 +117,13 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
                 this.typeRegistry = NetFlowV9FieldTypeRegistry.create(inputStream);
             }
         }
+    }
+
+    @Nullable
+    @Override
+    public CodecAggregator getAggregator() {
+        // this is intentional: we replace the entire channel handler in NetFlowUdpTransport because we need a different signature
+        return null;
     }
 
     @Nullable
