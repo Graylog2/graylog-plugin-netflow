@@ -39,10 +39,11 @@ public class NetFlowV9Parser {
     public static final int TEMPLATE_FLOWSET_ID = 0;
     public static final int OPTIONS_TEMPLATE_FLOWSET_ID = 1;
 
-    public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9TemplateCache cache, NetFlowV9FieldTypeRegistry typeRegistry) {
+    public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9FieldTypeRegistry typeRegistry) {
         final int dataLength = bb.readableBytes();
         final NetFlowV9Header header = parseHeader(bb);
 
+        Map<Integer, NetFlowV9Template> cache = Maps.newHashMap();
         final List<NetFlowV9Template> allTemplates = new ArrayList<>();
         NetFlowV9OptionTemplate optTemplate = null;
         List<NetFlowV9BaseRecord> records = Collections.emptyList();
@@ -53,7 +54,7 @@ public class NetFlowV9Parser {
                 final List<NetFlowV9Template> templates = parseTemplates(bb, typeRegistry);
                 allTemplates.addAll(templates);
                 for (NetFlowV9Template t : templates) {
-                    cache.put(t);
+                    cache.put(t.templateId(), t);
                 }
             } else if (flowSetId == 1) {
                 optTemplate = parseOptionTemplate(bb, typeRegistry);
@@ -223,7 +224,7 @@ public class NetFlowV9Parser {
      * | padding          | Padding should be inserted to align the end of the FlowSet on a 32 bit boundary. Pay attention that the length field will include those padding bits.                                                                                                                                     |
      * </pre>
      */
-    public static List<NetFlowV9BaseRecord> parseRecords(ByteBuf bb, NetFlowV9TemplateCache cache) {
+    public static List<NetFlowV9BaseRecord> parseRecords(ByteBuf bb, Map<Integer, NetFlowV9Template> cache) {
         List<NetFlowV9BaseRecord> records = new ArrayList<>();
         int flowSetId = bb.readUnsignedShort();
         int length = bb.readUnsignedShort();

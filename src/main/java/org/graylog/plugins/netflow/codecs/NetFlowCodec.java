@@ -31,14 +31,12 @@
  */
 package org.graylog.plugins.netflow.codecs;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.assistedinject.Assisted;
 import org.apache.commons.lang3.SystemUtils;
 import org.graylog.plugins.netflow.flows.FlowException;
 import org.graylog.plugins.netflow.flows.NetFlowParser;
 import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
-import org.graylog.plugins.netflow.v9.NetFlowV9TemplateCache;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.configuration.Configuration;
 import org.graylog2.plugin.configuration.ConfigurationRequest;
@@ -59,14 +57,10 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.concurrent.ScheduledExecutorService;
 
 @Codec(name = "netflow", displayName = "NetFlow")
 public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
@@ -94,20 +88,11 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
      */
     public static final byte ORDERED_V9_MARKER = 0x01;
 
-    private final NetFlowV9TemplateCache templateCache;
     private final NetFlowV9FieldTypeRegistry typeRegistry;
 
     @Inject
-    protected NetFlowCodec(@Assisted Configuration configuration,
-                           @Named("daemonScheduler") ScheduledExecutorService scheduler,
-                           ObjectMapper objectMapper) throws IOException {
+    protected NetFlowCodec(@Assisted Configuration configuration) throws IOException {
         super(configuration);
-
-        final int cacheSize = configuration.getInt(CK_CACHE_SIZE, DEFAULT_CACHE_SIZE);
-        final int cacheSaveInterval = configuration.getInt(CK_CACHE_SAVE_INTERVAL, DEFAULT_CACHE_SAVE_INTERVAL);
-        final String configCachePath = configuration.getString(CK_CACHE_PATH, DEFAULT_CACHE_PATH);
-        final Path cachePath = Paths.get(configCachePath);
-        this.templateCache = new NetFlowV9TemplateCache(cacheSize, cachePath, cacheSaveInterval, scheduler, objectMapper);
 
         final String netFlow9DefinitionsPath = configuration.getString(CK_NETFLOW9_DEFINITION_PATH);
         if (netFlow9DefinitionsPath == null || netFlow9DefinitionsPath.trim().isEmpty()) {
@@ -136,7 +121,7 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     @Override
     public Collection<Message> decodeMessages(@Nonnull RawMessage rawMessage) {
         try {
-            return NetFlowParser.parse(rawMessage, templateCache, typeRegistry);
+            return NetFlowParser.parse(rawMessage, typeRegistry);
         } catch (FlowException e) {
             LOG.error("Error parsing NetFlow packet <{}> received from <{}>", rawMessage.getId(), rawMessage.getRemoteAddress(), e);
             return null;

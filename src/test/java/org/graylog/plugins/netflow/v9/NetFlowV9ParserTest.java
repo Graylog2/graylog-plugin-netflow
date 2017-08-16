@@ -36,7 +36,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -49,17 +48,10 @@ public class NetFlowV9ParserTest {
 
     private final ObjectMapper objectMapper = new ObjectMapperProvider().get();
 
-    private NetFlowV9TemplateCache cache;
     private NetFlowV9FieldTypeRegistry typeRegistry;
 
     @Before
     public void setUp() throws IOException {
-        cache = new NetFlowV9TemplateCache(
-                1000L,
-                temporaryFolder.newFile().toPath(),
-                30 * 60,
-                Executors.newSingleThreadScheduledExecutor(),
-                objectMapper);
         typeRegistry = NetFlowV9FieldTypeRegistry.create();
 
     }
@@ -71,7 +63,7 @@ public class NetFlowV9ParserTest {
         final byte[] b3 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-3.dat"));
 
         // check header
-        NetFlowV9Packet p1 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b1), cache, typeRegistry);
+        NetFlowV9Packet p1 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b1), typeRegistry);
         assertEquals(9, p1.header().version());
         assertEquals(3, p1.header().count());
         assertEquals(0, p1.header().sequence());
@@ -111,7 +103,7 @@ public class NetFlowV9ParserTest {
         assertEquals(258, t2.templateId());
         assertEquals(18, t2.fieldCount());
 
-        NetFlowV9Packet p2 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b2), cache, typeRegistry);
+        NetFlowV9Packet p2 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b2), typeRegistry);
         NetFlowV9BaseRecord r2 = p2.records().get(0);
         Map<String, Object> f2 = r2.fields();
         assertEquals(2818L, f2.get("in_bytes"));
@@ -122,7 +114,7 @@ public class NetFlowV9ParserTest {
         assertEquals(1900, f2.get("l4_dst_port"));
         assertEquals((short) 17, f2.get("protocol"));
 
-        NetFlowV9Packet p3 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b3), cache, typeRegistry);
+        NetFlowV9Packet p3 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b3), typeRegistry);
         assertEquals(1, p3.records().size());
     }
 
@@ -130,7 +122,7 @@ public class NetFlowV9ParserTest {
     public void testParseIncomplete() throws Exception {
         final byte[] b = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-3_incomplete.dat"));
         assertThatExceptionOfType(EmptyTemplateException.class)
-                .isThrownBy(() -> NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b), cache, typeRegistry));
+                .isThrownBy(() -> NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b), typeRegistry));
     }
 
     @Test
@@ -143,7 +135,7 @@ public class NetFlowV9ParserTest {
                         if (packet.hasProtocol(Protocol.UDP)) {
                             final UDPPacket udp = (UDPPacket) packet.getPacket(Protocol.UDP);
                             final ByteBuf byteBuf = Unpooled.wrappedBuffer(udp.getPayload().getArray());
-                            final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, cache, typeRegistry);
+                            final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, typeRegistry);
                             assertThat(netFlowV9Packet).isNotNull();
                             allTemplates.addAll(netFlowV9Packet.templates());
                             allRecords.addAll(netFlowV9Packet.records());
@@ -203,7 +195,7 @@ public class NetFlowV9ParserTest {
                         if (packet.hasProtocol(Protocol.UDP)) {
                             final UDPPacket udp = (UDPPacket) packet.getPacket(Protocol.UDP);
                             final ByteBuf byteBuf = Unpooled.wrappedBuffer(udp.getPayload().getArray());
-                            final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, cache, typeRegistry);
+                            final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, typeRegistry);
                             assertThat(netFlowV9Packet).isNotNull();
                             allTemplates.addAll(netFlowV9Packet.templates());
                             allRecords.addAll(netFlowV9Packet.records());
@@ -257,7 +249,7 @@ public class NetFlowV9ParserTest {
                         if (packet.hasProtocol(Protocol.UDP)) {
                             final UDPPacket udp = (UDPPacket) packet.getPacket(Protocol.UDP);
                             final ByteBuf byteBuf = Unpooled.wrappedBuffer(udp.getPayload().getArray());
-                            final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, cache, typeRegistry);
+                            final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, typeRegistry);
                             assertThat(netFlowV9Packet).isNotNull();
                             allTemplates.addAll(netFlowV9Packet.templates());
                             allRecords.addAll(netFlowV9Packet.records());
@@ -391,7 +383,7 @@ public class NetFlowV9ParserTest {
                         if (packet.hasProtocol(Protocol.UDP)) {
                             final UDPPacket udp = (UDPPacket) packet.getPacket(Protocol.UDP);
                             final ByteBuf byteBuf = Unpooled.wrappedBuffer(udp.getPayload().getArray());
-                            final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, cache, typeRegistry);
+                            final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, typeRegistry);
                             assertThat(netFlowV9Packet).isNotNull();
                             allTemplates.addAll(netFlowV9Packet.templates());
                             allRecords.addAll(netFlowV9Packet.records());
@@ -438,7 +430,7 @@ public class NetFlowV9ParserTest {
                             final UDPPacket udp = (UDPPacket) packet.getPacket(Protocol.UDP);
                             final ByteBuf byteBuf = Unpooled.wrappedBuffer(udp.getPayload().getArray());
                             try {
-                                final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, cache, typeRegistry);
+                                final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(byteBuf, typeRegistry);
                                 assertThat(netFlowV9Packet).isNotNull();
                                 allTemplates.addAll(netFlowV9Packet.templates());
                                 allRecords.addAll(netFlowV9Packet.records());

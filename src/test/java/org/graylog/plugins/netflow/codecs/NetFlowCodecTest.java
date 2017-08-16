@@ -28,7 +28,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -50,7 +49,7 @@ public class NetFlowCodecTest {
                 NetFlowCodec.CK_CACHE_PATH, cacheFile.getAbsolutePath());
         final Configuration configuration = new Configuration(configMap);
 
-        codec = new NetFlowCodec(configuration, Executors.newSingleThreadScheduledExecutor(), objectMapper);
+        codec = new NetFlowCodec(configuration);
     }
 
     @Test
@@ -67,7 +66,7 @@ public class NetFlowCodecTest {
         final Configuration configuration = new Configuration(configMap);
 
         assertThatExceptionOfType(FileNotFoundException.class)
-                .isThrownBy(() -> new NetFlowCodec(configuration, Executors.newSingleThreadScheduledExecutor(), objectMapper))
+                .isThrownBy(() -> new NetFlowCodec(configuration))
                 .withMessageEndingWith("(No such file or directory)");
     }
 
@@ -82,7 +81,7 @@ public class NetFlowCodecTest {
                 NetFlowCodec.CK_NETFLOW9_DEFINITION_PATH, "");
         final Configuration configuration = new Configuration(configMap);
 
-        assertThat(new NetFlowCodec(configuration, Executors.newSingleThreadScheduledExecutor(), objectMapper)).isNotNull();
+        assertThat(new NetFlowCodec(configuration)).isNotNull();
     }
 
     @Test
@@ -96,7 +95,7 @@ public class NetFlowCodecTest {
                 NetFlowCodec.CK_NETFLOW9_DEFINITION_PATH, "   ");
         final Configuration configuration = new Configuration(configMap);
 
-        assertThat(new NetFlowCodec(configuration, Executors.newSingleThreadScheduledExecutor(), objectMapper)).isNotNull();
+        assertThat(new NetFlowCodec(configuration)).isNotNull();
     }
 
     @Test
@@ -113,7 +112,7 @@ public class NetFlowCodecTest {
         final Configuration configuration = new Configuration(configMap);
 
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new NetFlowCodec(configuration, Executors.newSingleThreadScheduledExecutor(), objectMapper))
+                .isThrownBy(() -> new NetFlowCodec(configuration))
                 .withMessageMatching("Unable to parse NetFlow 9 definitions");
     }
 
