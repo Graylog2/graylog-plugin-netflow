@@ -22,6 +22,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
 import org.graylog.plugins.netflow.v9.NetFlowV9Parser;
 import org.graylog.plugins.netflow.v9.RawNetFlowV9Packet;
 import org.graylog2.shared.utilities.ExceptionUtils;
@@ -52,9 +53,11 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
 
     private final Cache<TemplateKey, Queue<ByteBuf>> flowCache;
     private final Cache<TemplateKey, ByteBuf> templateCache;
+    private final NetFlowV9FieldTypeRegistry typeRegistry;
 
     @Inject
-    public NetflowV9CodecAggregator() {
+    public NetflowV9CodecAggregator(NetFlowV9FieldTypeRegistry typeRegistry) {
+        this.typeRegistry = typeRegistry;
         // TODO customize
         this.templateCache = CacheBuilder.newBuilder()
                 .maximumSize(5000)
@@ -99,7 +102,7 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
             // We do not include a NetFlow V9 header, because technically this is not a netflow packet and we do not want to trick anyone into believing it is.
 
             final ByteBuf byteBuf = Unpooled.wrappedBuffer(buf.toByteBuffer());
-            final RawNetFlowV9Packet rawNetFlowV9Packet = NetFlowV9Parser.parseIntoBuffers(byteBuf);
+            final RawNetFlowV9Packet rawNetFlowV9Packet = NetFlowV9Parser.parsePacketShallow(byteBuf);
             final long sourceId = rawNetFlowV9Packet.header().sourceId();
 
             // the list of template keys to return in the result

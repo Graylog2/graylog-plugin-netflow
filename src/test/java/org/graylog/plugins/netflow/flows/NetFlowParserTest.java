@@ -1,8 +1,10 @@
 package org.graylog.plugins.netflow.flows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
+import org.graylog.plugins.netflow.v9.NetFlowV9Template;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.journal.RawMessage;
 import org.graylog2.shared.bindings.providers.ObjectMapperProvider;
@@ -17,6 +19,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -94,9 +97,10 @@ public class NetFlowParserTest {
         final byte[] b3 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-3.dat"));
         final InetSocketAddress source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
 
-        final List<Message> messages1 = NetFlowParser.parse(new RawMessage(b1, source), typeRegistry);
+        Map<Integer, NetFlowV9Template> cache = Maps.newHashMap();
+        final List<Message> messages1 = NetFlowParser.parse(new RawMessage(b1, source), typeRegistry, cache);
         assertThat(messages1).isEmpty();
-        final List<Message> messages2 = NetFlowParser.parse(new RawMessage(b2, source), typeRegistry);
+        final List<Message> messages2 = NetFlowParser.parse(new RawMessage(b2, source), typeRegistry, cache);
         assertThat(messages2).isNotNull().hasSize(1);
 
         final Message message2 = messages2.get(0);
@@ -113,7 +117,7 @@ public class NetFlowParserTest {
                 .containsEntry("nf_proto_name", "UDP");
 
 
-        final List<Message> messages3 = NetFlowParser.parse(new RawMessage(b3, source), typeRegistry);
+        final List<Message> messages3 = NetFlowParser.parse(new RawMessage(b3, source), typeRegistry, cache);
         assertThat(messages3).isNotNull().hasSize(1);
 
         final Message message3 = messages3.get(0);

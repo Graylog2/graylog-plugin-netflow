@@ -15,9 +15,9 @@
  */
 package org.graylog.plugins.netflow.v9;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -25,7 +25,6 @@ import io.pkts.Pcap;
 import io.pkts.packet.UDPPacket;
 import io.pkts.protocol.Protocol;
 import org.graylog.plugins.netflow.flows.EmptyTemplateException;
-import org.graylog2.shared.bindings.providers.ObjectMapperProvider;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,8 +45,6 @@ public class NetFlowV9ParserTest {
     @Rule
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-    private final ObjectMapper objectMapper = new ObjectMapperProvider().get();
-
     private NetFlowV9FieldTypeRegistry typeRegistry;
 
     @Before
@@ -62,8 +59,9 @@ public class NetFlowV9ParserTest {
         final byte[] b2 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-2.dat"));
         final byte[] b3 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-3.dat"));
 
+        Map<Integer, NetFlowV9Template> cache = Maps.newHashMap();
         // check header
-        NetFlowV9Packet p1 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b1), typeRegistry);
+        NetFlowV9Packet p1 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b1), typeRegistry, cache);
         assertEquals(9, p1.header().version());
         assertEquals(3, p1.header().count());
         assertEquals(0, p1.header().sequence());
@@ -103,7 +101,7 @@ public class NetFlowV9ParserTest {
         assertEquals(258, t2.templateId());
         assertEquals(18, t2.fieldCount());
 
-        NetFlowV9Packet p2 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b2), typeRegistry);
+        NetFlowV9Packet p2 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b2), typeRegistry, cache);
         NetFlowV9BaseRecord r2 = p2.records().get(0);
         Map<String, Object> f2 = r2.fields();
         assertEquals(2818L, f2.get("in_bytes"));
@@ -114,7 +112,7 @@ public class NetFlowV9ParserTest {
         assertEquals(1900, f2.get("l4_dst_port"));
         assertEquals((short) 17, f2.get("protocol"));
 
-        NetFlowV9Packet p3 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b3), typeRegistry);
+        NetFlowV9Packet p3 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b3), typeRegistry, cache);
         assertEquals(1, p3.records().size());
     }
 
