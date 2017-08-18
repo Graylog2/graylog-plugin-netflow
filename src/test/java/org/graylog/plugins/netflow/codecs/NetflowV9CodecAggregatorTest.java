@@ -62,6 +62,31 @@ public class NetflowV9CodecAggregatorTest {
         codec = new NetFlowCodec(configuration);
     }
 
+
+    @Test
+    public void pcap_netgraph_NetFlowV5() throws Exception {
+        final Collection<Message> allMessages = decodePcapStream("netflow-data/netgraph-netflow5.pcap");
+        assertThat(allMessages)
+                .hasSize(120)
+                .allSatisfy(message -> assertThat(message.getField("nf_version")).isEqualTo(5));
+    }
+
+    @Test
+    public void pcap_nprobe_NetFlowV9_mixed() throws Exception {
+        final Collection<Message> allMessages = decodePcapStream("netflow-data/nprobe-netflow9.pcap");
+        assertThat(allMessages)
+                .hasSize(152);
+    }
+
+    @Test
+    public void pcap_softflowd_NetFlowV5() throws Exception {
+        final Collection<Message> allMessages = decodePcapStream("netflow-data/netflow5.pcap");
+
+        assertThat(allMessages)
+                .hasSize(4)
+                .allSatisfy(message -> assertThat(message.getField("nf_version")).isEqualTo(5));
+    }
+
     @Test
     public void pcap_softflowd_NetFlowV9() throws Exception {
         final List<NetFlowV9BaseRecord> allRecords = new ArrayList<>();
@@ -112,6 +137,15 @@ public class NetflowV9CodecAggregatorTest {
                                         .build())
                 );
 
+    }
+
+    @Test
+    public void pcap_pmacctd_NetFlowV5() throws Exception {
+        final Collection<Message> allMessages = decodePcapStream("netflow-data/pmacctd-netflow5.pcap");
+
+        assertThat(allMessages)
+                .hasSize(42)
+                .allSatisfy(message -> assertThat(message.getField("nf_version")).isEqualTo(5));
     }
 
     @Test
@@ -467,7 +501,7 @@ public class NetflowV9CodecAggregatorTest {
                             final InetSocketAddress source = new InetSocketAddress(udp.getSourceIP(), udp.getSourcePort());
                             final CodecAggregator.Result result = codecAggregator.addChunk(ChannelBuffers.copiedBuffer(udp.getPayload().getArray()), source);
                             if (result.isValid() && result.getMessage() != null) {
-                                final Collection<Message> c = codec.decodeMessages(new RawMessage(udp.getPayload().getArray(), source));
+                                final Collection<Message> c = codec.decodeMessages(convertToRawMessage(result, source));
                                 if (c != null) {
                                     allMessages.addAll(c);
                                 }
