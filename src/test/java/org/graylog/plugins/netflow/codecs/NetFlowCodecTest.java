@@ -1,8 +1,6 @@
 package org.graylog.plugins.netflow.codecs;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.io.Resources;
 import io.pkts.Pcap;
 import io.pkts.packet.UDPPacket;
@@ -11,8 +9,6 @@ import org.graylog.plugins.netflow.flows.FlowException;
 import org.graylog2.plugin.Message;
 import org.graylog2.plugin.configuration.Configuration;
 import org.graylog2.plugin.journal.RawMessage;
-import org.graylog2.shared.bindings.providers.ObjectMapperProvider;
-import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,16 +33,11 @@ public class NetFlowCodecTest {
     @Rule
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-    private final ObjectMapper objectMapper = new ObjectMapperProvider().get();
     private NetFlowCodec codec;
 
     @Before
     public void setUp() throws Exception {
-        final File cacheFile = temporaryFolder.newFile();
-        final ImmutableMap<String, Object> configMap = ImmutableMap.of(
-                NetFlowCodec.CK_CACHE_SIZE, 100,
-                NetFlowCodec.CK_CACHE_SAVE_INTERVAL, 300,
-                NetFlowCodec.CK_CACHE_PATH, cacheFile.getAbsolutePath());
+        final ImmutableMap<String, Object> configMap = ImmutableMap.of();
         final Configuration configuration = new Configuration(configMap);
 
         codec = new NetFlowCodec(configuration);
@@ -54,14 +45,10 @@ public class NetFlowCodecTest {
 
     @Test
     public void constructorFailsIfNetFlow9DefinitionsPathDoesNotExist() throws Exception {
-        final File cacheFile = temporaryFolder.newFile();
         final File definitionsFile = temporaryFolder.newFile();
         assertThat(definitionsFile.delete()).isTrue();
 
         final ImmutableMap<String, Object> configMap = ImmutableMap.of(
-                NetFlowCodec.CK_CACHE_SIZE, 100,
-                NetFlowCodec.CK_CACHE_SAVE_INTERVAL, 300,
-                NetFlowCodec.CK_CACHE_PATH, cacheFile.getAbsolutePath(),
                 NetFlowCodec.CK_NETFLOW9_DEFINITION_PATH, definitionsFile.getAbsolutePath());
         final Configuration configuration = new Configuration(configMap);
 
@@ -72,12 +59,7 @@ public class NetFlowCodecTest {
 
     @Test
     public void constructorSucceedsIfNetFlow9DefinitionsPathIsEmpty() throws Exception {
-        final File cacheFile = temporaryFolder.newFile();
-
         final ImmutableMap<String, Object> configMap = ImmutableMap.of(
-                NetFlowCodec.CK_CACHE_SIZE, 100,
-                NetFlowCodec.CK_CACHE_SAVE_INTERVAL, 300,
-                NetFlowCodec.CK_CACHE_PATH, cacheFile.getAbsolutePath(),
                 NetFlowCodec.CK_NETFLOW9_DEFINITION_PATH, "");
         final Configuration configuration = new Configuration(configMap);
 
@@ -86,12 +68,7 @@ public class NetFlowCodecTest {
 
     @Test
     public void constructorSucceedsIfNetFlow9DefinitionsPathIsBlank() throws Exception {
-        final File cacheFile = temporaryFolder.newFile();
-
         final ImmutableMap<String, Object> configMap = ImmutableMap.of(
-                NetFlowCodec.CK_CACHE_SIZE, 100,
-                NetFlowCodec.CK_CACHE_SAVE_INTERVAL, 300,
-                NetFlowCodec.CK_CACHE_PATH, cacheFile.getAbsolutePath(),
                 NetFlowCodec.CK_NETFLOW9_DEFINITION_PATH, "   ");
         final Configuration configuration = new Configuration(configMap);
 
@@ -100,14 +77,10 @@ public class NetFlowCodecTest {
 
     @Test
     public void constructorFailsIfNetFlow9DefinitionsPathIsInvalidYaml() throws Exception {
-        final File cacheFile = temporaryFolder.newFile();
         final File definitionsFile = temporaryFolder.newFile();
         Files.write(definitionsFile.toPath(), "foo: %bar".getBytes(StandardCharsets.UTF_8));
 
         final ImmutableMap<String, Object> configMap = ImmutableMap.of(
-                NetFlowCodec.CK_CACHE_SIZE, 100,
-                NetFlowCodec.CK_CACHE_SAVE_INTERVAL, 300,
-                NetFlowCodec.CK_CACHE_PATH, cacheFile.getAbsolutePath(),
                 NetFlowCodec.CK_NETFLOW9_DEFINITION_PATH, definitionsFile.getAbsolutePath());
         final Configuration configuration = new Configuration(configMap);
 
@@ -138,86 +111,19 @@ public class NetFlowCodecTest {
         final byte[] b = "Foobar".getBytes(StandardCharsets.UTF_8);
         final InetSocketAddress source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
         final RawMessage rawMessage = new RawMessage(b, source) {
+            private boolean triggered = false;
             @Override
             public byte[] getPayload() {
+                if (triggered) {
+                    return new byte[]{};
+                }
+                triggered = true;
                 throw new FlowException("Boom!");
             }
         };
 
         final Collection<Message> messages = codec.decodeMessages(rawMessage);
         assertThat(messages).isNull();
-    }
-
-    @Test
-    public void decodeMessagesSuccessfullyDecodesNetFlowV5() throws Exception {
-        final byte[] b = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v5-1.dat"));
-        final InetSocketAddress source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
-        final RawMessage rawMessage = new RawMessage(b, source);
-
-        final Collection<Message> messages = codec.decodeMessages(rawMessage);
-        assertThat(messages)
-                .isNotNull()
-                .hasSize(2);
-        final Message message = Iterables.get(messages, 0);
-        assertThat(message).isNotNull();
-
-        assertThat(message.getMessage()).isEqualTo("NetFlowV5 [10.0.2.2]:54435 <> [10.0.2.15]:22 proto:6 pkts:5 bytes:230");
-        assertThat(message.getTimestamp()).isEqualTo(DateTime.parse("2015-05-02T18:38:08.280Z"));
-        assertThat(message.getSource()).isEqualTo(source.getAddress().getHostAddress());
-        assertThat(message.getFields())
-                .containsEntry("nf_src_address", "10.0.2.2")
-                .containsEntry("nf_dst_address", "10.0.2.15")
-                .containsEntry("nf_proto_name", "TCP")
-                .containsEntry("nf_src_as", 0)
-                .containsEntry("nf_dst_as", 0)
-                .containsEntry("nf_snmp_input", 0)
-                .containsEntry("nf_snmp_output", 0);
-    }
-
-    @Test
-    public void decodeMessagesSuccessfullyDecodesNetFlowV9() throws Exception {
-        final byte[] b1 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-1.dat"));
-        final byte[] b2 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-2.dat"));
-        final byte[] b3 = Resources.toByteArray(Resources.getResource("netflow-data/netflow-v9-2-3.dat"));
-        final InetSocketAddress source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
-
-        final Collection<Message> messages1 = codec.decodeMessages(new RawMessage(b1, source));
-        assertThat(messages1).isEmpty();
-        final Collection<Message> messages2 = codec.decodeMessages(new RawMessage(b2, source));
-        assertThat(messages2)
-                .isNotNull()
-                .hasSize(1);
-        final Message message2 = Iterables.getFirst(messages2, null);
-        assertThat(message2).isNotNull();
-        assertThat(message2.getMessage()).isEqualTo("NetFlowV9 [192.168.124.1]:3072 <> [239.255.255.250]:1900 proto:17 pkts:8 bytes:2818");
-        assertThat(message2.getTimestamp()).isEqualTo(DateTime.parse("2013-05-21T07:51:49.000Z"));
-        assertThat(message2.getSource()).isEqualTo(source.getAddress().getHostAddress());
-        assertThat(message2.getFields())
-                .containsEntry("nf_src_address", "192.168.124.1")
-                .containsEntry("nf_dst_address", "239.255.255.250")
-                .containsEntry("nf_proto_name", "UDP")
-                .containsEntry("nf_src_as", 0L)
-                .containsEntry("nf_dst_as", 0L)
-                .containsEntry("nf_snmp_input", 0)
-                .containsEntry("nf_snmp_output", 0);
-
-        final Collection<Message> messages3 = codec.decodeMessages(new RawMessage(b3, source));
-        assertThat(messages3)
-                .isNotNull()
-                .hasSize(1);
-        final Message message3 = Iterables.getFirst(messages3, null);
-        assertThat(message3).isNotNull();
-        assertThat(message3.getMessage()).isEqualTo("NetFlowV9 [192.168.124.20]:42444 <> [121.161.231.32]:9090 proto:17 pkts:2 bytes:348");
-        assertThat(message3.getTimestamp()).isEqualTo(DateTime.parse("2013-05-21T07:52:43.000Z"));
-        assertThat(message3.getSource()).isEqualTo(source.getAddress().getHostAddress());
-        assertThat(message3.getFields())
-                .containsEntry("nf_src_address", "192.168.124.20")
-                .containsEntry("nf_dst_address", "121.161.231.32")
-                .containsEntry("nf_proto_name", "UDP")
-                .containsEntry("nf_src_as", 0L)
-                .containsEntry("nf_dst_as", 0L)
-                .containsEntry("nf_snmp_input", 0)
-                .containsEntry("nf_snmp_output", 0);
     }
 
     @Test

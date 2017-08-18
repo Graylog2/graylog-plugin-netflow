@@ -15,6 +15,8 @@
  */
 package org.graylog.plugins.netflow.codecs;
 
+import com.google.common.base.MoreObjects;
+
 import java.net.SocketAddress;
 import java.util.Objects;
 
@@ -45,5 +47,14 @@ public class TemplateKey {
     @Override
     public int hashCode() {
         return Objects.hash(remoteAddress, sourceId, templateId);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("remoteAddress", remoteAddress)
+                .add("sourceId", sourceId)
+                .add("templateId", templateId)
+                .toString();
     }
 }

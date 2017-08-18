@@ -17,8 +17,9 @@
 
 package org.graylog.plugins.netflow.flows;
 
-import com.google.common.collect.Maps;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.graylog.plugins.netflow.codecs.NetFlowCodec;
 import org.graylog.plugins.netflow.v5.NetFlowV5Packet;
 import org.graylog.plugins.netflow.v5.NetFlowV5Parser;
 import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
@@ -32,7 +33,6 @@ import org.graylog2.plugin.journal.RawMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
@@ -41,32 +41,28 @@ import java.util.stream.Collectors;
 public class NetFlowParser {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowParser.class);
 
-    @Nullable
-    public static List<Message> parse(RawMessage rawMessage, NetFlowV9FieldTypeRegistry typeRegistry) throws FlowException {
-        return parse(rawMessage, typeRegistry, Maps.newHashMap());
-    }
-
     public static List<Message> parse(RawMessage rawMessage, NetFlowV9FieldTypeRegistry typeRegistry, Map<Integer, NetFlowV9Template> cache) throws FlowException {
         final ResolvableInetSocketAddress remoteAddress = rawMessage.getRemoteAddress();
         final InetSocketAddress sender = remoteAddress != null ? remoteAddress.getInetSocketAddress() : null;
 
         final byte[] payload = rawMessage.getPayload();
-        if(payload.length < 2) {
+        if(payload.length < 3) {
             LOG.debug("NetFlow message (source: {}) doesn't even fit the NetFlow version (size: {} bytes)",
                     sender, payload.length);
             return null;
         }
 
-        final int netFlowVersion = (payload[0] << 8) + payload[1];
-        switch (netFlowVersion) {
-            case 5:
-                final NetFlowV5Packet netFlowV5Packet = NetFlowV5Parser.parsePacket(Unpooled.wrappedBuffer(payload));
+        final ByteBuf buffer = Unpooled.wrappedBuffer(payload);
+        switch (buffer.readByte()) {
+            case NetFlowCodec.PASSTHROUGH_MARKER:
+                final NetFlowV5Packet netFlowV5Packet = NetFlowV5Parser.parsePacket(buffer);
 
                 return netFlowV5Packet.records().stream()
                         .map(record ->  NetFlowFormatter.toMessage(netFlowV5Packet.header(), record, sender))
                         .collect(Collectors.toList());
-            case 9:
-                final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(payload), typeRegistry, cache);
+            case NetFlowCodec.ORDERED_V9_MARKER:
+                // our "custom" netflow v9 that has all the templates in the same packet
+                final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(buffer, typeRegistry, cache);
                 return netFlowV9Packet.records().stream()
                         .filter(record -> record instanceof NetFlowV9Record)
                     .map(record ->  NetFlowFormatter.toMessage(netFlowV9Packet.header(), record, sender))
@@ -75,7 +71,7 @@ public class NetFlowParser {
                 final List<RawMessage.SourceNode> sourceNodes = rawMessage.getSourceNodes();
                 final RawMessage.SourceNode sourceNode = sourceNodes.isEmpty() ? null : sourceNodes.get(sourceNodes.size() - 1);
                 final String inputId = sourceNode == null ? "<unknown>" : sourceNode.inputId;
-                LOG.warn("Unsupported NetFlow version {} on input {} (source: {})", netFlowVersion, inputId, sender);
+                LOG.warn("Unsupported NetFlow packet on input {} (source: {})", inputId, sender);
                 return null;
         }
     }

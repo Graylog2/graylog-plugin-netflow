@@ -21,8 +21,9 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
+import org.graylog.plugins.netflow.v9.NetFlowV9Header;
 import org.graylog.plugins.netflow.v9.NetFlowV9Parser;
 import org.graylog.plugins.netflow.v9.RawNetFlowV9Packet;
 import org.graylog2.shared.utilities.ExceptionUtils;
@@ -35,11 +36,13 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import java.net.SocketAddress;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * For Netflow v9 packets we want to prepend the corresponding flow template.
@@ -52,12 +55,10 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
     private static final ChannelBuffer PASSTHROUGH_MARKER = ChannelBuffers.wrappedBuffer(new byte[]{NetFlowCodec.PASSTHROUGH_MARKER});
 
     private final Cache<TemplateKey, Queue<ByteBuf>> flowCache;
-    private final Cache<TemplateKey, ByteBuf> templateCache;
-    private final NetFlowV9FieldTypeRegistry typeRegistry;
+    private final Cache<TemplateKey, TemplateByteBuf> templateCache;
 
     @Inject
-    public NetflowV9CodecAggregator(NetFlowV9FieldTypeRegistry typeRegistry) {
-        this.typeRegistry = typeRegistry;
+    public NetflowV9CodecAggregator() {
         // TODO customize
         this.templateCache = CacheBuilder.newBuilder()
                 .maximumSize(5000)
@@ -99,12 +100,12 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
             // We then cache the raw bytes for template flows, keyed by remote ip and source id. These are used to reassemble the packet for the journal later.
             // For each data flow that we do not have a matching template for yet, we put that into a queue.
             // Once the template flow arrives we go back through the queue and remove matching flows for further processing.
-            // We do not include a NetFlow V9 header, because technically this is not a netflow packet and we do not want to trick anyone into believing it is.
-
             final ByteBuf byteBuf = Unpooled.wrappedBuffer(buf.toByteBuffer());
+            LOG.error("Received V9 packet:\n{}", ByteBufUtil.prettyHexDump(byteBuf));
             final RawNetFlowV9Packet rawNetFlowV9Packet = NetFlowV9Parser.parsePacketShallow(byteBuf);
             final long sourceId = rawNetFlowV9Packet.header().sourceId();
 
+            LOG.info("Incoming NetFlow V9 packet contains: {}", rawNetFlowV9Packet);
             // the list of template keys to return in the result
             final Set<TemplateKey> templates = Sets.newHashSet();
             // this list of flows to return in the result
@@ -113,32 +114,37 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
             // register templates and check for buffered flows
             rawNetFlowV9Packet.templates().forEach((templateId, buffer) -> {
                 final TemplateKey templateKey = new TemplateKey(remoteAddress, sourceId, templateId);
-                templateCache.put(templateKey, buffer);
+                templateCache.put(templateKey, new TemplateByteBuf(buffer, false));
                 // check for previously queued buffers for this template
-                final Queue<ByteBuf> bufferedFlows = flowCache.getIfPresent(templateKey);
-                if (bufferedFlows != null) {
-                    templates.add(templateKey);
-                    ByteBuf flow;
-                    while (null != (flow = bufferedFlows.poll())) {
-                        flowBuffers.add(ChannelBuffers.wrappedBuffer(flow.array()));
-                    }
-                }
+                queueBufferedFlows(templates, flowBuffers, templateKey);
+
             });
+            final Map.Entry<Integer, ByteBuf> optionTemplate = rawNetFlowV9Packet.optionTemplate();
+            if (optionTemplate != null) {
+                final TemplateKey templateKey = new TemplateKey(remoteAddress, sourceId, optionTemplate.getKey());
+                templateCache.put(templateKey, new TemplateByteBuf(optionTemplate.getValue(), true));
+                // check for previously queued buffers for this template
+                queueBufferedFlows(templates, flowBuffers, templateKey);
+            }
 
             // process the current flows
             rawNetFlowV9Packet.dataFlows().forEach((templateId, dataFlowBuffer) -> {
                 final TemplateKey templateKey = new TemplateKey(remoteAddress, sourceId, templateId);
-                final ByteBuf templateFlow = templateCache.getIfPresent(templateKey);
+                final TemplateByteBuf templateFlow = templateCache.getIfPresent(templateKey);
                 if (templateFlow != null) {
                     // we have the template, so we can re-assemble it
-
+                    LOG.info("Data flow uses template {}", templateKey);
                     final Queue<ByteBuf> bufferedFlows = flowCache.getIfPresent(templateKey);
                     if (bufferedFlows != null) {
-                        templates.add(templateKey);
-                        flowBuffers.add(ChannelBuffers.wrappedBuffer(dataFlowBuffer.nioBuffer()));
+                        bufferedFlows.forEach(prevFlowBuffer -> flowBuffers.add(ChannelBuffers.wrappedBuffer(prevFlowBuffer.nioBuffer())));
+                        LOG.info("Adding {} data flows for this template which were previously buffered.", bufferedFlows.size());
                     }
+                    // add the current flow
+                    flowBuffers.add(ChannelBuffers.wrappedBuffer(dataFlowBuffer.nioBuffer()));
+                    templates.add(templateKey);
                 } else {
                     // we don't know the template, save this flow for later
+                    LOG.info("Data flow uses template {} but we haven't received it yet. Buffering data flow.", templateId);
                     try {
                         final Queue<ByteBuf> byteBufs = flowCache.get(templateKey, ConcurrentLinkedQueue::new);
                         byteBufs.add(dataFlowBuffer);
@@ -151,18 +157,51 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
             if (!flowBuffers.isEmpty()) {
                 final ChannelBuffer resultBuffer = ChannelBuffers.dynamicBuffer();
                 resultBuffer.writeByte(NetFlowCodec.ORDERED_V9_MARKER);
-                templates.stream()
+                resultBuffer.writeBytes(NetFlowV9Header.create(9, templates.size() + flowBuffers.size(),
+                        0, 0, 0, rawNetFlowV9Packet.header().sourceId())
+                        .encode());
+                final ByteBuf[] optionTemplateBuf = {null};
+                final List<ByteBuf> templatesToWrite = templates.stream()
                         .map(templateCache::getIfPresent)
-                        .filter(obj -> {
-                            if (obj == null) {
+                        .filter(cachedTemplate -> {
+                            if (cachedTemplate == null) {
                                 LOG.warn("Template expired while processing it");
                                 return false;
                             } else {
                                 return true;
                             }
                         })
-                        .forEach(templateBuffer -> resultBuffer.writeBytes(templateBuffer.nioBuffer()));
+                        .filter(templateByteBuf -> {
+                            if (templateByteBuf.optionTemplate) {
+                                optionTemplateBuf[0] = templateByteBuf.buf;
+                            }
+                            return !templateByteBuf.optionTemplate;
+                        })
+                        .map(templateByteBuf -> templateByteBuf.buf)
+                        .collect(Collectors.toList());
+                LOG.info("{} data flows to sent, referencing {} templates", flowBuffers.size(), templatesToWrite.size() + (optionTemplateBuf[0] == null ? 0 : 1));
+
+                if (!templatesToWrite.isEmpty()) {
+                    LOG.info("Writing {} template flows", templatesToWrite.size());
+                    // this is the template flow set
+                    resultBuffer.writeShort(0);
+                    // template flowset length
+                    resultBuffer.writeShort(templatesToWrite.stream().mapToInt(ByteBuf::readableBytes).sum());
+                    // actual templates
+                    templatesToWrite.forEach(templateBuffer -> resultBuffer.writeBytes(templateBuffer.nioBuffer()));
+                }
+
+                if (optionTemplateBuf[0] != null) {
+                    LOG.info("Writing options template flow {}", optionTemplateBuf[0]);
+                    // we also need to serialize the option template
+                    resultBuffer.writeShort(1);
+                    // the buffer already contains the length, so we don't need to calculate it here
+                    resultBuffer.writeBytes(optionTemplateBuf[0].nioBuffer());
+                }
+
+                // finally write out all the data flow sets
                 flowBuffers.forEach(resultBuffer::writeBytes);
+                LOG.info("Writing re-assembled NetFlow V9 packet:\n{}", ByteBufUtil.prettyHexDump(Unpooled.wrappedBuffer(resultBuffer.toByteBuffer())));
                 return new Result(resultBuffer, true);
             }
 
@@ -173,4 +212,24 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
         }
     }
 
+    private void queueBufferedFlows(Set<TemplateKey> templates, List<ChannelBuffer> flowBuffers, TemplateKey templateKey) {
+        final Queue<ByteBuf> bufferedFlows = flowCache.getIfPresent(templateKey);
+        if (bufferedFlows != null) {
+            templates.add(templateKey);
+            ByteBuf flow;
+            while (null != (flow = bufferedFlows.poll())) {
+                flowBuffers.add(ChannelBuffers.wrappedBuffer(flow.array()));
+            }
+        }
+    }
+
+    private class TemplateByteBuf {
+        private final boolean optionTemplate;
+        ByteBuf buf;
+
+        public TemplateByteBuf(ByteBuf buffer, boolean optionTemplate) {
+            buf = buffer;
+            this.optionTemplate = optionTemplate;
+        }
+    }
 }

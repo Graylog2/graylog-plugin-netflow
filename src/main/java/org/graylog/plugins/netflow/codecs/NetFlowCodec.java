@@ -32,16 +32,24 @@
 package org.graylog.plugins.netflow.codecs;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 import com.google.inject.assistedinject.Assisted;
-import org.apache.commons.lang3.SystemUtils;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import org.graylog.plugins.netflow.flows.FlowException;
-import org.graylog.plugins.netflow.flows.NetFlowParser;
+import org.graylog.plugins.netflow.flows.NetFlowFormatter;
+import org.graylog.plugins.netflow.v5.NetFlowV5Packet;
+import org.graylog.plugins.netflow.v5.NetFlowV5Parser;
 import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
+import org.graylog.plugins.netflow.v9.NetFlowV9Packet;
+import org.graylog.plugins.netflow.v9.NetFlowV9Parser;
+import org.graylog.plugins.netflow.v9.NetFlowV9Record;
 import org.graylog2.plugin.Message;
+import org.graylog2.plugin.ResolvableInetSocketAddress;
 import org.graylog2.plugin.configuration.Configuration;
 import org.graylog2.plugin.configuration.ConfigurationRequest;
 import org.graylog2.plugin.configuration.fields.ConfigurationField;
-import org.graylog2.plugin.configuration.fields.NumberField;
 import org.graylog2.plugin.configuration.fields.TextField;
 import org.graylog2.plugin.inputs.annotations.Codec;
 import org.graylog2.plugin.inputs.annotations.ConfigClass;
@@ -60,24 +68,18 @@ import javax.inject.Inject;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Codec(name = "netflow", displayName = "NetFlow")
 public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowCodec.class);
 
     @VisibleForTesting
-    static final String CK_CACHE_SIZE = "cache_size";
-    @VisibleForTesting
-    static final String CK_CACHE_PATH = "cache_path";
-    @VisibleForTesting
-    static final String CK_CACHE_SAVE_INTERVAL = "cache_save_interval";
-    @VisibleForTesting
     static final String CK_NETFLOW9_DEFINITION_PATH = "netflow9_definitions_Path";
 
-    private static final int DEFAULT_CACHE_SIZE = 1000;
-    private static final String DEFAULT_CACHE_PATH = SystemUtils.getJavaIoTmpDir().toPath().resolve("netflow-templates.json").toString();
-    private static final int DEFAULT_CACHE_SAVE_INTERVAL = 15 * 60;
     /**
      * Marker byte which signals that the contained netflow packet should be parsed as is.
      */
@@ -121,9 +123,43 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
     @Override
     public Collection<Message> decodeMessages(@Nonnull RawMessage rawMessage) {
         try {
-            return NetFlowParser.parse(rawMessage, typeRegistry);
+            final ResolvableInetSocketAddress remoteAddress = rawMessage.getRemoteAddress();
+            final InetSocketAddress sender = remoteAddress != null ? remoteAddress.getInetSocketAddress() : null;
+
+            final byte[] payload = rawMessage.getPayload();
+            if(payload.length < 3) {
+                LOG.debug("NetFlow message (source: {}) doesn't even fit the NetFlow version (size: {} bytes)",
+                        sender, payload.length);
+                return null;
+            }
+
+            final ByteBuf buffer = Unpooled.wrappedBuffer(payload);
+            switch (buffer.readByte()) {
+                case PASSTHROUGH_MARKER:
+                    final NetFlowV5Packet netFlowV5Packet = NetFlowV5Parser.parsePacket(buffer);
+
+                    return netFlowV5Packet.records().stream()
+                            .map(record ->  NetFlowFormatter.toMessage(netFlowV5Packet.header(), record, sender))
+                            .collect(Collectors.toList());
+                case ORDERED_V9_MARKER:
+                    // our "custom" netflow v9 that has all the templates in the same packet
+                    final NetFlowV9Packet netFlowV9Packet = NetFlowV9Parser.parsePacket(buffer, typeRegistry, Maps.newHashMap());
+                    return netFlowV9Packet.records().stream()
+                            .filter(record -> record instanceof NetFlowV9Record)
+                        .map(record ->  NetFlowFormatter.toMessage(netFlowV9Packet.header(), record, sender))
+                        .collect(Collectors.toList());
+                default:
+                    final List<RawMessage.SourceNode> sourceNodes = rawMessage.getSourceNodes();
+                    final RawMessage.SourceNode sourceNode = sourceNodes.isEmpty() ? null : sourceNodes.get(sourceNodes.size() - 1);
+                    final String inputId = sourceNode == null ? "<unknown>" : sourceNode.inputId;
+                    LOG.warn("Unsupported NetFlow packet on input {} (source: {})", inputId, sender);
+                    return null;
+            }
         } catch (FlowException e) {
             LOG.error("Error parsing NetFlow packet <{}> received from <{}>", rawMessage.getId(), rawMessage.getRemoteAddress(), e);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("NetFlow packet hexdump:\n{}", ByteBufUtil.prettyHexDump(Unpooled.wrappedBuffer(rawMessage.getPayload())));
+            }
             return null;
         }
     }
@@ -149,12 +185,7 @@ public class NetFlowCodec extends AbstractCodec implements MultiMessageCodec {
         @Override
         public ConfigurationRequest getRequestedConfiguration() {
             final ConfigurationRequest configuration = super.getRequestedConfiguration();
-
-            configuration.addField(new NumberField(CK_CACHE_SIZE, "Maximum cache size", DEFAULT_CACHE_SIZE, "Maximum number of elements in the NetFlow 9 template cache", ConfigurationField.Optional.OPTIONAL));
-            configuration.addField(new TextField(CK_CACHE_PATH, "Cache file path", DEFAULT_CACHE_PATH, "Path to the file persisting the the NetFlow 9 template cache", ConfigurationField.Optional.OPTIONAL));
-            configuration.addField(new NumberField(CK_CACHE_SAVE_INTERVAL, "Cache save interval (seconds)", DEFAULT_CACHE_SAVE_INTERVAL, "Interval in seconds for persisting the cache contents", ConfigurationField.Optional.OPTIONAL));
             configuration.addField(new TextField(CK_NETFLOW9_DEFINITION_PATH, "Netflow 9 field definitions", "", "Path to the YAML file containing Netflow 9 field definitions", ConfigurationField.Optional.OPTIONAL));
-
             return configuration;
         }
     }

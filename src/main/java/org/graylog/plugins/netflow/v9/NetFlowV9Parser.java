@@ -62,7 +62,7 @@ public class NetFlowV9Parser {
                 optionTemplateReference.set(optTemplate);
             } else {
                 bb.resetReaderIndex();
-                if (cache.isEmpty()) {
+                if (cache.isEmpty() && optTemplate == null) {
                     throw new EmptyTemplateException("Unable to parse NetFlow 9 records without template. Discarding packet.");
                 }
                 records = parseRecords(bb, cache);
@@ -358,6 +358,7 @@ public class NetFlowV9Parser {
 
         Map<Integer, ByteBuf> allTemplates = Maps.newHashMap();
         Map<Integer, ByteBuf> records = Maps.newHashMap();
+        Map.Entry<Integer, ByteBuf> optTemplate = null;
         while (bb.isReadable()) {
             bb.markReaderIndex();
             int flowSetId = bb.readUnsignedShort();
@@ -367,18 +368,15 @@ public class NetFlowV9Parser {
                     allTemplates.put(t.getKey(), t.getValue());
                 }
             } else if (flowSetId == 1) {
-                final Map.Entry<Integer, ByteBuf> optTemplate = parseOptionTemplateShallow(bb);
-                allTemplates.put(optTemplate.getKey(), optTemplate.getValue());
+                optTemplate = parseOptionTemplateShallow(bb);
             } else {
                 bb.resetReaderIndex();
-                if (allTemplates.isEmpty()) {
-                    throw new EmptyTemplateException("Unable to parse NetFlow 9 records without template. Discarding packet.");
-                }
                 final Map.Entry<Integer, ByteBuf> recordsForTemplate = parseRecordsShallow(bb);
                 records.put(recordsForTemplate.getKey(), recordsForTemplate.getValue());
             }
         }
 
-        return RawNetFlowV9Packet.create(header, dataLength, allTemplates, records);
+        return RawNetFlowV9Packet.create(header, dataLength, allTemplates, optTemplate, records);
     }
+
 }
