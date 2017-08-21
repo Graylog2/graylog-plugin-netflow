@@ -3,8 +3,8 @@ syntax = "proto2";
 package org.graylog.plugins.netflow.v9;
 
 // to regenerate:
-// install protobuf compiler (this was generated with 2.5.0)
-// protoc --java_out=src/main/java resources/netflow_v9.proto
+// install protobuf compiler (this was generated with 3.0.0)
+// protoc --java_out=src/main/java src/main/resources/netflow_v9.proto
 
 option java_package = "org.graylog.plugins.netflow.v9";
 option java_outer_classname = "NetFlowV9Journal";
