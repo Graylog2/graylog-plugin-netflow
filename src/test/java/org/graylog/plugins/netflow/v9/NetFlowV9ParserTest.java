@@ -52,7 +52,7 @@ public class NetFlowV9ParserTest {
 
         Map<Integer, NetFlowV9Template> cache = Maps.newHashMap();
         // check header
-        NetFlowV9Packet p1 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b1), typeRegistry, cache);
+        NetFlowV9Packet p1 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b1), typeRegistry, cache, null);
         assertEquals(9, p1.header().version());
         assertEquals(3, p1.header().count());
         assertEquals(0, p1.header().sequence());
@@ -92,7 +92,7 @@ public class NetFlowV9ParserTest {
         assertEquals(258, t2.templateId());
         assertEquals(18, t2.fieldCount());
 
-        NetFlowV9Packet p2 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b2), typeRegistry, cache);
+        NetFlowV9Packet p2 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b2), typeRegistry, cache, null);
         NetFlowV9BaseRecord r2 = p2.records().get(0);
         Map<String, Object> f2 = r2.fields();
         assertEquals(2818L, f2.get("in_bytes"));
@@ -103,7 +103,7 @@ public class NetFlowV9ParserTest {
         assertEquals(1900, f2.get("l4_dst_port"));
         assertEquals((short) 17, f2.get("protocol"));
 
-        NetFlowV9Packet p3 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b3), typeRegistry, cache);
+        NetFlowV9Packet p3 = NetFlowV9Parser.parsePacket(Unpooled.wrappedBuffer(b3), typeRegistry, cache, null);
         assertEquals(1, p3.records().size());
     }
 

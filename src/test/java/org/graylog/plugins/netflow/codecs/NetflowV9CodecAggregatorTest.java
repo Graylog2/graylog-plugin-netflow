@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -14,9 +13,7 @@ import io.pkts.protocol.Protocol;
 import org.graylog.plugins.netflow.v9.NetFlowV9BaseRecord;
 import org.graylog.plugins.netflow.v9.NetFlowV9FieldDef;
 import org.graylog.plugins.netflow.v9.NetFlowV9FieldType;
-import org.graylog.plugins.netflow.v9.NetFlowV9FieldTypeRegistry;
 import org.graylog.plugins.netflow.v9.NetFlowV9Packet;
-import org.graylog.plugins.netflow.v9.NetFlowV9Parser;
 import org.graylog.plugins.netflow.v9.NetFlowV9Record;
 import org.graylog.plugins.netflow.v9.NetFlowV9Template;
 import org.graylog2.plugin.Message;
@@ -28,6 +25,8 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,15 +41,14 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class NetflowV9CodecAggregatorTest {
+    private static final Logger LOG = LoggerFactory.getLogger(NetflowV9CodecAggregatorTest.class);
 
-    private final NetFlowV9FieldTypeRegistry typeRegistry;
     private NetFlowCodec codec;
     private NetflowV9CodecAggregator codecAggregator;
     private InetSocketAddress source;
 
     public NetflowV9CodecAggregatorTest() throws IOException {
         source = new InetSocketAddress(InetAddress.getLocalHost(), 12345);
-        typeRegistry = NetFlowV9FieldTypeRegistry.create();
     }
 
     @Before
@@ -391,7 +389,7 @@ public class NetflowV9CodecAggregatorTest {
                         ).build()
                 )
         );
-        assertThat(allRecords).hasSize(2);
+        assertThat(allRecords).hasSize(16);
     }
 
     @Test
@@ -478,9 +476,9 @@ public class NetflowV9CodecAggregatorTest {
                             final CodecAggregator.Result result = codecAggregator.addChunk(ChannelBuffers.copiedBuffer(udp.getPayload().getArray()), source);
                             if (result.isValid() && result.getMessage() != null) {
                                 final ByteBuf buffer = Unpooled.wrappedBuffer(result.getMessage().toByteBuffer());
-                                /* byte type = */
+                                // must read the marker byte off the buffer first.
                                 buffer.readByte();
-                                allPackets.add(NetFlowV9Parser.parsePacket(buffer, typeRegistry, Maps.newHashMap()));
+                                allPackets.addAll(codec.decodeV9Packets(buffer));
                             }
                         }
                         return true;

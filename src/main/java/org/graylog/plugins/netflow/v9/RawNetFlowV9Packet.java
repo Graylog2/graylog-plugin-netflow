@@ -7,6 +7,7 @@ import io.netty.buffer.Unpooled;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Set;
 
 @AutoValue
 public abstract class RawNetFlowV9Packet {
@@ -20,10 +21,10 @@ public abstract class RawNetFlowV9Packet {
     @Nullable
     public abstract Map.Entry<Integer, ByteBuf> optionTemplate();
 
-    public abstract Map<Integer, ByteBuf> dataFlows();
+    public abstract Set<Integer> usedTemplates();
 
-    public static RawNetFlowV9Packet create(NetFlowV9Header header, int dataLength, Map<Integer, ByteBuf> templates, @Nullable Map.Entry<Integer, ByteBuf> optTemplate, Map<Integer, ByteBuf> dataFlows) {
-        return new AutoValue_RawNetFlowV9Packet(header, dataLength, templates, optTemplate, dataFlows);
+    public static RawNetFlowV9Packet create(NetFlowV9Header header, int dataLength, Map<Integer, ByteBuf> templates, @Nullable Map.Entry<Integer, ByteBuf> optTemplate, Set<Integer> usedTemplates) {
+        return new AutoValue_RawNetFlowV9Packet(header, dataLength, templates, optTemplate, usedTemplates);
     }
 
     @Override
@@ -38,10 +39,8 @@ public abstract class RawNetFlowV9Packet {
         if (optionTemplate != null) {
             sb.append("\nOption Template:\n").append(ByteBufUtil.prettyHexDump(optionTemplate.getValue()));
         }
-        sb.append("\nData flows:\n");
-        dataFlows().forEach((integer, byteBuf) -> {
-            sb.append(integer).append(":\n").append(ByteBufUtil.prettyHexDump(byteBuf));
-        });
+        sb.append("\nData flows using these templates:\n");
+        usedTemplates().forEach(templateId -> sb.append(templateId).append(" "));
         return sb.toString();
     }
 }

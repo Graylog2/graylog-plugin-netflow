@@ -18,17 +18,20 @@ package org.graylog.plugins.netflow.v9;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import io.netty.buffer.ByteBuf;
 import org.graylog.plugins.netflow.flows.EmptyTemplateException;
 import org.graylog.plugins.netflow.flows.InvalidFlowVersionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 
@@ -38,15 +41,15 @@ public class NetFlowV9Parser {
     private static final AtomicReference<NetFlowV9OptionTemplate> optionTemplateReference = new AtomicReference<>();
 
     public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9FieldTypeRegistry typeRegistry) {
-        return parsePacket(bb, typeRegistry, Maps.newHashMap());
+        return parsePacket(bb, typeRegistry, Maps.newHashMap(), null);
     }
 
-    public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9FieldTypeRegistry typeRegistry, Map<Integer, NetFlowV9Template> cache) {
+    public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9FieldTypeRegistry typeRegistry, Map<Integer, NetFlowV9Template> cache, @Nullable NetFlowV9OptionTemplate optionTemplate) {
         final int dataLength = bb.readableBytes();
         final NetFlowV9Header header = parseHeader(bb);
 
         final List<NetFlowV9Template> allTemplates = new ArrayList<>();
-        NetFlowV9OptionTemplate optTemplate = null;
+        NetFlowV9OptionTemplate optTemplate = optionTemplate;
         List<NetFlowV9BaseRecord> records = Collections.emptyList();
         while (bb.isReadable()) {
             bb.markReaderIndex();
@@ -65,7 +68,7 @@ public class NetFlowV9Parser {
                 if (cache.isEmpty() && optTemplate == null) {
                     throw new EmptyTemplateException("Unable to parse NetFlow 9 records without template. Discarding packet.");
                 }
-                records = parseRecords(bb, cache);
+                records = parseRecords(bb, cache, optionTemplate);
             }
         }
 
@@ -125,31 +128,34 @@ public class NetFlowV9Parser {
 
         int p = 4; // flow set id and length field itself
         while (p < len) {
-            final int templateId = bb.readUnsignedShort();
-            final int fieldCount = bb.readUnsignedShort();
-            final ImmutableList.Builder<NetFlowV9FieldDef> fieldDefs = ImmutableList.builder();
-            for (int i = 0; i < fieldCount; i++) {
-                int fieldType = bb.readUnsignedShort();
-                int fieldLength = bb.readUnsignedShort();
-                final NetFlowV9FieldType registeredType = typeRegistry.get(fieldType);
-                final NetFlowV9FieldType type;
-                if (registeredType == null) {
-                    // Unknown/invalid field type
-                    type = NetFlowV9FieldType.create(fieldType, NetFlowV9FieldType.ValueType.byLength(fieldLength), "nf_field_" + fieldType);
-                } else {
-                    type = registeredType;
-                }
-                final NetFlowV9FieldDef fieldDef = NetFlowV9FieldDef.create(type, fieldLength);
-                fieldDefs.add(fieldDef);
-            }
-
-            final NetFlowV9Template template = NetFlowV9Template.create(templateId, fieldCount, fieldDefs.build());
+            final NetFlowV9Template template = parseTemplate(bb, typeRegistry);
             templates.add(template);
-
             p += 4 + template.fieldCount() * 4;
         }
 
         return templates.build();
+    }
+
+    public static NetFlowV9Template parseTemplate(ByteBuf bb, NetFlowV9FieldTypeRegistry typeRegistry) {
+        final int templateId = bb.readUnsignedShort();
+        final int fieldCount = bb.readUnsignedShort();
+        final ImmutableList.Builder<NetFlowV9FieldDef> fieldDefs = ImmutableList.builder();
+        for (int i = 0; i < fieldCount; i++) {
+            int fieldType = bb.readUnsignedShort();
+            int fieldLength = bb.readUnsignedShort();
+            final NetFlowV9FieldType registeredType = typeRegistry.get(fieldType);
+            final NetFlowV9FieldType type;
+            if (registeredType == null) {
+                // Unknown/invalid field type
+                type = NetFlowV9FieldType.create(fieldType, NetFlowV9FieldType.ValueType.byLength(fieldLength), "nf_field_" + fieldType);
+            } else {
+                type = registeredType;
+            }
+            final NetFlowV9FieldDef fieldDef = NetFlowV9FieldDef.create(type, fieldLength);
+            fieldDefs.add(fieldDef);
+        }
+
+        return NetFlowV9Template.create(templateId, fieldCount, fieldDefs.build());
     }
 
     /**
@@ -282,15 +288,14 @@ public class NetFlowV9Parser {
      * | padding          | Padding should be inserted to align the end of the FlowSet on a 32 bit boundary. Pay attention that the length field will include those padding bits.                                                                                                                                     |
      * </pre>
      */
-    public static List<NetFlowV9BaseRecord> parseRecords(ByteBuf bb, Map<Integer, NetFlowV9Template> cache) {
+    public static List<NetFlowV9BaseRecord> parseRecords(ByteBuf bb, Map<Integer, NetFlowV9Template> cache, NetFlowV9OptionTemplate optionTemplate) {
         List<NetFlowV9BaseRecord> records = new ArrayList<>();
         int flowSetId = bb.readUnsignedShort();
         int length = bb.readUnsignedShort();
         int end = bb.readerIndex() - 4 + length;
 
-        List<NetFlowV9FieldDef> defs = null;
+        List<NetFlowV9FieldDef> defs;
 
-        final NetFlowV9OptionTemplate optionTemplate = optionTemplateReference.get();
         boolean isOptionTemplate = optionTemplate != null && optionTemplate.templateId() == flowSetId;
         if (isOptionTemplate) {
             defs = optionTemplate.optionDefs();
@@ -342,13 +347,13 @@ public class NetFlowV9Parser {
     }
 
     // like above, but contains all records for the template id as raw bytes
-    public static Map.Entry<Integer, ByteBuf> parseRecordsShallow(ByteBuf bb) {
+    public static Integer parseRecordShallow(ByteBuf bb) {
         final int start = bb.readerIndex();
         int usedTemplateId = bb.readUnsignedShort();
         int length = bb.readUnsignedShort();
         int end = bb.readerIndex() - 4 + length;
         bb.readerIndex(end);
-        return Maps.immutableEntry(usedTemplateId, bb.copy(start, length));
+        return usedTemplateId;
     }
 
 
@@ -357,7 +362,7 @@ public class NetFlowV9Parser {
         final NetFlowV9Header header = parseHeader(bb);
 
         Map<Integer, ByteBuf> allTemplates = Maps.newHashMap();
-        Map<Integer, ByteBuf> records = Maps.newHashMap();
+        Set<Integer> usedTemplates = Sets.newHashSet();
         Map.Entry<Integer, ByteBuf> optTemplate = null;
         while (bb.isReadable()) {
             bb.markReaderIndex();
@@ -371,12 +376,11 @@ public class NetFlowV9Parser {
                 optTemplate = parseOptionTemplateShallow(bb);
             } else {
                 bb.resetReaderIndex();
-                final Map.Entry<Integer, ByteBuf> recordsForTemplate = parseRecordsShallow(bb);
-                records.put(recordsForTemplate.getKey(), recordsForTemplate.getValue());
+                usedTemplates.add(parseRecordShallow(bb));
             }
         }
 
-        return RawNetFlowV9Packet.create(header, dataLength, allTemplates, optTemplate, records);
+        return RawNetFlowV9Packet.create(header, dataLength, allTemplates, optTemplate, usedTemplates);
     }
 
 }

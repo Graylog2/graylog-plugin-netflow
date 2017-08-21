@@ -44,6 +44,18 @@ public class TemplateKey {
                 Objects.equals(remoteAddress, that.remoteAddress);
     }
 
+    public SocketAddress getRemoteAddress() {
+        return remoteAddress;
+    }
+
+    public long getSourceId() {
+        return sourceId;
+    }
+
+    public int getTemplateId() {
+        return templateId;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(remoteAddress, sourceId, templateId);
