@@ -97,8 +97,8 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
             // The rest of the code works as follows:
             // We shallowly parse the incoming packet, extracting all flows into ByteBufs.
             // We then cache the raw bytes for template flows, keyed by remote ip and source id. These are used to reassemble the packet for the journal later.
-            // For each data flow that we do not have a matching template for yet, we put that into a queue.
-            // Once the template flow arrives we go back through the queue and remove matching flows for further processing.
+            // For each netflow v9 packet that we do not have a matching template for yet, we put it into a queue.
+            // Once the template flow arrives we go back through the queue and remove now matching packets for further processing.
             final ByteBuf byteBuf = Unpooled.wrappedBuffer(buf.toByteBuffer());
             if (LOG.isTraceEnabled()) {
                 LOG.trace("Received V9 packet:\n{}", ByteBufUtil.prettyHexDump(byteBuf));
