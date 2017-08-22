@@ -17,6 +17,7 @@ package org.graylog.plugins.netflow.transport;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
+import com.google.inject.assistedinject.Assisted;
 import org.graylog.plugins.netflow.codecs.NetflowV9CodecAggregator;
 import org.graylog2.inputs.transports.UdpTransport;
 import org.graylog2.plugin.LocalMetricRegistry;
@@ -55,7 +56,7 @@ public class NetFlowUdpTransport extends UdpTransport {
     private final NetflowV9CodecAggregator netflowV9CodecAggregator;
 
     @Inject
-    public NetFlowUdpTransport(Configuration configuration,
+    public NetFlowUdpTransport(@Assisted Configuration configuration,
                                ThroughputCounter throughputCounter,
                                LocalMetricRegistry localRegistry,
                                NetflowV9CodecAggregator netflowV9CodecAggregator) {
