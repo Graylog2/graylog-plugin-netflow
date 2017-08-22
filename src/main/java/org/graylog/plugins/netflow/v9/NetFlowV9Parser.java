@@ -32,13 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 
 public class NetFlowV9Parser {
     private static final Logger LOG = LoggerFactory.getLogger(NetFlowV9Parser.class);
-
-    private static final AtomicReference<NetFlowV9OptionTemplate> optionTemplateReference = new AtomicReference<>();
 
     public static NetFlowV9Packet parsePacket(ByteBuf bb, NetFlowV9FieldTypeRegistry typeRegistry) {
         return parsePacket(bb, typeRegistry, Maps.newHashMap(), null);
@@ -62,7 +59,6 @@ public class NetFlowV9Parser {
                 }
             } else if (flowSetId == 1) {
                 optTemplate = parseOptionTemplate(bb, typeRegistry);
-                optionTemplateReference.set(optTemplate);
             } else {
                 bb.resetReaderIndex();
                 if (cache.isEmpty() && optTemplate == null) {
