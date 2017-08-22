@@ -66,9 +66,11 @@ public class NetFlowUdpTransport extends UdpTransport {
 
     @Override
     protected LinkedHashMap<String, Callable<? extends ChannelHandler>> getFinalChannelHandlers(MessageInput input) {
-        final LinkedHashMap<String, Callable<? extends ChannelHandler>> handlers = super.getFinalChannelHandlers(input);
+        final LinkedHashMap<String, Callable<? extends ChannelHandler>> finalChannelHandlers = super.getFinalChannelHandlers(input);
+        final LinkedHashMap<String, Callable<? extends ChannelHandler>> handlers = new LinkedHashMap<>();
         // replace the codec-aggregator handler with one that passes the remote address
         handlers.put("codec-aggregator", () -> new NetflowMessageAggregationHandler(netflowV9CodecAggregator));
+        handlers.putAll(finalChannelHandlers);
         return handlers;
     }
 
