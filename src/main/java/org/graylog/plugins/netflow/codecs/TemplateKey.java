@@ -28,6 +28,18 @@ public class TemplateKey {
     private final long sourceId;
     private final int templateId;
 
+    /**
+     * A key usable for identifying netflow exporters, when the template id is irrelevant.
+     * This is used for grouping buffered packets by their exporter, because template ids are only unique across remote address and source id.
+     *
+     * @param remoteAddress the exporters address
+     * @param sourceId the observation id
+     * @return object for use as cache key
+     */
+    public static TemplateKey idForExporter(SocketAddress remoteAddress, long sourceId) {
+        return new TemplateKey(remoteAddress, sourceId, -1);
+    }
+
     public TemplateKey(SocketAddress remoteAddress, long sourceId, int templateId) {
         this.remoteAddress = remoteAddress;
         this.sourceId = sourceId;
