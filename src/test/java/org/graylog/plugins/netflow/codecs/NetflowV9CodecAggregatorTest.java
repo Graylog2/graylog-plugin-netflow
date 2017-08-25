@@ -161,7 +161,7 @@ public class NetflowV9CodecAggregatorTest {
         assertThat(allTemplates).contains(
                 NetFlowV9Template.create(1024, 10,
                         ImmutableList.<NetFlowV9FieldDef>builder().add(
-                                NetFlowV9FieldDef.create(NetFlowV9FieldType.create(153, NetFlowV9FieldType.ValueType.UINT64, "field_153"), 8),
+                                NetFlowV9FieldDef.create(NetFlowV9FieldType.create(153, NetFlowV9FieldType.ValueType.UINT64, "flow_end_msec"), 8),
                                 NetFlowV9FieldDef.create(NetFlowV9FieldType.create(152, NetFlowV9FieldType.ValueType.UINT64, "flow_start_msec"), 8),
                                 NetFlowV9FieldDef.create(NetFlowV9FieldType.create(1, NetFlowV9FieldType.ValueType.UINT32, "in_bytes"), 8),
                                 NetFlowV9FieldDef.create(NetFlowV9FieldType.create(2, NetFlowV9FieldType.ValueType.UINT32, "in_pkts"), 8),
@@ -179,7 +179,7 @@ public class NetflowV9CodecAggregatorTest {
                 .contains(
                         NetFlowV9Record.create(
                                 ImmutableMap.<String, Object>builder()
-                                        .put("field_153", 1501508283491L)
+                                        .put("flow_end_msec", 1501508283491L)
                                         .put("flow_start_msec", 1501508283473L)
                                         .put("in_bytes", 68L)
                                         .put("in_pkts", 1L)
