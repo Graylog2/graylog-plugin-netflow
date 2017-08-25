@@ -143,7 +143,7 @@ public class NetFlowV9Parser {
             final NetFlowV9FieldType type;
             if (registeredType == null) {
                 // Unknown/invalid field type
-                type = NetFlowV9FieldType.create(fieldType, NetFlowV9FieldType.ValueType.byLength(fieldLength), "nf_field_" + fieldType);
+                type = NetFlowV9FieldType.create(fieldType, NetFlowV9FieldType.ValueType.byLength(fieldLength), "field_" + fieldType);
             } else {
                 type = registeredType;
             }
