@@ -23,7 +23,6 @@ import com.google.protobuf.ByteString;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 import org.graylog.plugins.netflow.v9.NetFlowV9Journal;
 import org.graylog.plugins.netflow.v9.NetFlowV9Parser;
 import org.graylog.plugins.netflow.v9.RawNetFlowV9Packet;
@@ -193,7 +192,9 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
                     // include the template in our result
                     templates.add(templateKey);
 
-                    final ByteBuf packet = buf.copy();
+                    // .slice is enough here, because we convert it into a byte array when creating the result below
+                    // no need to copy or retain anything, the buffer only lives as long as this method's scope
+                    final ByteBuf packet = buf.slice();
                     packetsToSend.add(packet);
                 }
             }
@@ -228,7 +229,6 @@ public class NetflowV9CodecAggregator implements RemoteAddressCodecAggregator {
             // finally write out all the packets we had buffered as well as the current one
             for (ByteBuf packetBuffer : packetsToSend) {
                 final byte[] bytes = ByteBufUtil.getBytes(packetBuffer);
-                ReferenceCountUtil.release(packetBuffer);
                 final ByteString value = ByteString.copyFrom(bytes);
                 builder.addPackets(value);
             }
