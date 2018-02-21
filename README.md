@@ -1,3 +1,11 @@
+# DEPRECATION NOTICE
+
+This project has been merged into [graylog2-server](https://github.com/Graylog2/graylog2-server), see [#26](https://github.com/Graylog2/graylog-plugin-netflow/issues/26)
+
+Please use the [issue tracker in the graylog2-server repository](https://github.com/Graylog2/graylog2-server/issues) for any feature requests or bug reports.
+
+----
+
 NetFlow Plugin for Graylog
 ==========================
 
